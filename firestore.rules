@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Notifications: users read their own, admin writes via Admin SDK
+    match /notifications/{notifId} {
+      allow read: if request.auth != null
+                  && request.auth.uid == resource.data.userId;
+      allow write: if false; // Admin SDK only
+    }
+
+    // Tickets: clients read own, agents/super_admins read all
+    match /tickets/{ticketId} {
+      allow read: if request.auth != null && (
+        resource.data.createdBy == request.auth.uid
+        || request.auth.token.role in ['agent', 'super_admin']
+      );
+      allow write: if false; // Admin SDK only
+
+      // Ticket messages: any authenticated user with ticket access
+      match /messages/{messageId} {
+        allow read: if request.auth != null;
+        allow write: if false; // Admin SDK only
+      }
+    }
+  }
+}

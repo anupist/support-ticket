@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Organization {
+  id        String   @id
+  name      String
+  slug      String   @unique
+  settings  Json     @default("{}")
+  branding  Json     @default("{}")
+  billing   Json     @default("{}")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("organizations")
+}
+
+model User {
+  id             String   @id
+  email          String
+  displayName    String   @default("") @map("display_name")
+  avatarUrl      String   @default("") @map("avatar_url")
+  role           String   @default("client")
+  tenantId       String   @map("tenant_id")
+  organizationId String   @map("organization_id")
+  isActive       Boolean  @default(true) @map("is_active")
+  preferences    Json     @default("{}")
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([role])
+  @@map("users")
+}
+
+model Ticket {
+  id                 String    @id @default(uuid())
+  ticketNumber       String    @unique @map("ticket_number")
+  subject            String
+  description        String
+  status             String    @default("open")
+  priority           String    @default("medium")
+  categoryId         String?   @map("category_id")
+  categoryName       String?   @map("category_name")
+  tags               Json      @default("[]")
+  assignedTo         String?   @map("assigned_to")
+  assignedToName     String?   @map("assigned_to_name")
+  createdBy          String    @map("created_by")
+  createdByName      String    @map("created_by_name")
+  lastActivityAt     DateTime  @default(now()) @map("last_activity_at")
+  lastMessageAt      DateTime? @map("last_message_at")
+  lastMessageBy      String?   @map("last_message_by")
+  lastMessageByRole  String?   @map("last_message_by_role")
+  lastMessagePreview String?   @map("last_message_preview")
+  messageCount       Int       @default(0) @map("message_count")
+  isArchived         Boolean   @default(false) @map("is_archived")
+  tenantId           String    @map("tenant_id")
+  organizationId     String    @map("organization_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([createdBy])
+  @@index([assignedTo])
+  @@index([lastActivityAt])
+  @@map("tickets")
+}
+
+model TicketMessage {
+  id            String    @id @default(uuid())
+  ticketId      String    @map("ticket_id")
+  body          String
+  messageType   String    @default("public") @map("message_type")
+  createdBy     String    @map("created_by")
+  createdByName String    @map("created_by_name")
+  createdByRole String    @map("created_by_role")
+  attachments   Json      @default("[]")
+  isEdited      Boolean   @default(false) @map("is_edited")
+  editedAt      DateTime? @map("edited_at")
+  tenantId      String    @map("tenant_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([ticketId, createdAt])
+  @@map("ticket_messages")
+}
+
+model Notification {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  type         String
+  title        String
+  body         String?
+  ticketId     String?   @map("ticket_id")
+  ticketNumber String?   @map("ticket_number")
+  actorId      String?   @map("actor_id")
+  actorName    String?   @map("actor_name")
+  isRead       Boolean   @default(false) @map("is_read")
+  readAt       DateTime? @map("read_at")
+  metadata     Json      @default("{}")
+  tenantId     String    @map("tenant_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId, isRead, createdAt])
+  @@index([tenantId])
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id              String   @id @default(uuid())
+  action          String
+  entityType      String   @map("entity_type")
+  entityId        String   @map("entity_id")
+  performedBy     String   @map("performed_by")
+  performedByName String   @map("performed_by_name")
+  metadata        Json     @default("{}")
+  tenantId        String   @map("tenant_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId, createdAt])
+  @@map("activity_logs")
+}
+
+model TicketCategory {
+  id        String   @id @default(uuid())
+  name      String
+  tenantId  String   @map("tenant_id")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@map("ticket_categories")
+}
+
+model TicketNumberCounter {
+  id           String @id
+  currentValue Int    @default(0) @map("current_value")
+
+  @@map("ticket_number_counters")
+}
