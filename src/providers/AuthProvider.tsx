@@ -9,6 +9,7 @@ interface AuthContextValue {
     email: string | null;
     displayName: string | null;
     avatarUrl: string;
+    customPermissions?: string[];
   } | null;
   loading: boolean;
   role: string | null;
@@ -43,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role: data.role,
             tenantId: data.tenantId,
             avatarUrl: data.avatarUrl || '',
+            customPermissions: data.customPermissions,
           });
         } else {
           clearUserStore();
@@ -79,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: data.user.role,
       tenantId: data.user.tenantId,
       avatarUrl: userAvatar,
+      customPermissions: data.user.customPermissions,
     });
   }, [setUserStore]);
 
@@ -105,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: data.user.role,
       tenantId: data.user.tenantId,
       avatarUrl: userAvatar,
+      customPermissions: data.user.customPermissions,
     });
   }, [setUserStore]);
 
@@ -119,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user: storeUser
-          ? { uid: storeUser.uid, email: storeUser.email, displayName: storeUser.displayName, avatarUrl: storeUser.avatarUrl }
+          ? { uid: storeUser.uid, email: storeUser.email, displayName: storeUser.displayName, avatarUrl: storeUser.avatarUrl, customPermissions: storeUser.customPermissions }
           : null,
         loading,
         role,

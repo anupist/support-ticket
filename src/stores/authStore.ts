@@ -9,6 +9,7 @@ interface AuthState {
     role: Role;
     tenantId: string;
     avatarUrl: string;
+    customPermissions?: string[];
   } | null;
   isLoading: boolean;
   setUser: (user: AuthState['user']) => void;

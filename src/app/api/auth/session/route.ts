@@ -38,6 +38,14 @@ export async function POST(request: Request) {
       },
     });
 
+    const metadata = (user.metadata as any) || {};
+    const isFirstLogin = !metadata.lastLoginAt;
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { metadata: { ...metadata, lastLoginAt: Date.now() } },
+    });
+
     const response = NextResponse.json({
       user: {
         id: user.id,
@@ -47,6 +55,7 @@ export async function POST(request: Request) {
         tenantId: user.tenantId,
         avatarUrl: user.avatarUrl,
       },
+      mustChangePassword: user.mustChangePassword,
     });
 
     response.cookies.set('session', token, {

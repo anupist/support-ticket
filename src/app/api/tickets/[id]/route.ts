@@ -14,7 +14,7 @@ import type { Role } from '@/types';
 export const GET = createHandler(async (req, { user, params }) => {
   const ticket = await getTicket(params.id);
 
-  if (!canAccessTicket(user.role as Role, user.uid, ticket.createdBy)) {
+  if (!canAccessTicket(user.role as Role, user.uid, ticket.createdBy, ticket.assignedTo)) {
     throw new ForbiddenError('You do not have access to this ticket');
   }
 

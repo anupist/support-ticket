@@ -19,6 +19,7 @@ export function useFirebaseAuth() {
             role: data.role || 'client',
             tenantId: data.tenantId || 'org_default',
             avatarUrl: data.avatarUrl || '',
+            customPermissions: data.customPermissions,
           });
         } else {
           clearUser();

@@ -1,19 +1,41 @@
 'use client';
 
+import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { useTickets } from '@/hooks/useTickets';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PriorityBadge } from '@/components/shared/PriorityBadge';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { TicketListSkeleton } from '@/components/shared/LoadingSkeleton';
-import { Plus, Ticket } from 'lucide-react';
+import { Plus, Ticket, Search, X } from 'lucide-react';
 import { RelativeTime } from '@/components/relative-time';
+import { formatDate } from '@/lib/utils';
+import type { TicketStatus } from '@/types';
+
+const STATUS_FILTERS = ['all', 'open', 'in_progress', 'resolved', 'closed'] as const;
 
 function TicketListContent() {
-  const { tickets, loading } = useTickets();
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const { tickets, loading } = useTickets({
+    status: statusFilter as TicketStatus | 'all',
+    search: debouncedSearch,
+  });
+
+  const handleSearch = useCallback((value: string) => {
+    setSearchQuery(value);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(value);
+    }, 300);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -30,13 +52,45 @@ function TicketListContent() {
         </Button>
       </div>
 
+      <div className="flex items-center gap-4">
+        <div className="flex gap-1 overflow-x-auto">
+          {STATUS_FILTERS.map((status) => (
+            <Button
+              key={status}
+              variant={statusFilter === status ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter(status)}
+            >
+              {status === 'all' ? 'All' : status.replace(/_/g, ' ')}
+            </Button>
+          ))}
+        </div>
+        <div className="relative flex-1 max-w-sm ml-auto">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search tickets..."
+            className="pl-9 pr-8"
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => { setSearchQuery(''); setDebouncedSearch(''); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
       {loading ? (
         <TicketListSkeleton />
       ) : tickets.length === 0 ? (
         <EmptyState
           icon={<Ticket className="h-12 w-12" />}
-          title="No tickets yet"
-          description="Create your first support ticket to get help from our team."
+          title="No tickets found"
+          description={searchQuery ? `No tickets matching "${searchQuery}"` : statusFilter !== 'all' ? `No tickets with status "${statusFilter}"` : 'No tickets yet. Create your first support ticket.'}
           action={
             <Button asChild>
               <Link href="/portal/tickets/new">Create Ticket</Link>
@@ -61,6 +115,9 @@ function TicketListContent() {
                       <h3 className="font-medium truncate">{ticket.subject}</h3>
                       <p className="text-sm text-muted-foreground truncate mt-0.5">
                         {ticket.lastMessagePreview || ticket.description?.substring(0, 100)}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Created {formatDate(ticket.createdAt)}
                       </p>
                     </div>
                     <div className="text-xs text-muted-foreground whitespace-nowrap ml-4">

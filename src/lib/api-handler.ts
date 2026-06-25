@@ -37,7 +37,7 @@ export function createHandler(
 
       if (config.permissions && user) {
         for (const permission of config.permissions) {
-          requirePermission(user.role as Role, permission);
+          requirePermission(user.role as Role, permission, user.customPermissions);
         }
       }
 

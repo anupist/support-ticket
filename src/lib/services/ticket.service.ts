@@ -90,6 +90,7 @@ export async function getTicketsByFilter(params: {
   priority?: string;
   createdBy?: string;
   assignedTo?: string;
+  search?: string;
   limitCount?: number;
 }) {
   const where: Record<string, unknown> = {
@@ -100,6 +101,13 @@ export async function getTicketsByFilter(params: {
   if (params.priority) where.priority = params.priority;
   if (params.createdBy) where.createdBy = params.createdBy;
   if (params.assignedTo) where.assignedTo = params.assignedTo;
+  if (params.search) {
+    where.OR = [
+      { subject: { contains: params.search, mode: 'insensitive' } },
+      { ticketNumber: { contains: params.search, mode: 'insensitive' } },
+      { createdByName: { contains: params.search, mode: 'insensitive' } },
+    ];
+  }
 
   const tickets = await prisma.ticket.findMany({
     where: where as any,

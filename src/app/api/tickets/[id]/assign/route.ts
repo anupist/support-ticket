@@ -3,6 +3,7 @@ import { createHandler } from '@/lib/api-handler';
 import { getTicket, updateTicket } from '@/lib/services/ticket.service';
 import { createNotification } from '@/lib/services/notification.service';
 import { logActivity } from '@/lib/services/activity.service';
+import { sendTicketAssignedEmail } from '@/lib/services/mail.service';
 import { assignTicketSchema } from '@/lib/validations/ticket.schema';
 import { getUser } from '@/lib/services/user.service';
 import { ValidationError } from '@/lib/errors';
@@ -35,9 +36,12 @@ export const POST = createHandler(
       ticketId: ticket.id,
       ticketNumber: ticket.ticketNumber,
       actorId: user.uid,
-      actorName: user.email,
+      actorName: user.displayName || user.email,
       metadata: { assignedBy: user.uid },
     });
+
+    const assignLink = `${process.env.NEXT_PUBLIC_APP_URL}/admin/tickets/${ticket.id}`;
+    await sendTicketAssignedEmail(assignedUser.email, assignedUser.displayName, ticket.ticketNumber, ticket.subject, user.displayName || user.email, assignLink).catch(() => {});
 
     await logActivity({
       action: 'ticket.assigned',

@@ -38,10 +38,14 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await apiFetch('/api/auth/session', {
+      const data = await apiFetch('/api/auth/session', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
+      if (data.mustChangePassword) {
+        router.push('/profile/password?firstLogin=true');
+        return;
+      }
       const verify = await apiFetch('/api/auth/verify');
       if (verify.role === 'client') {
         router.push('/portal');

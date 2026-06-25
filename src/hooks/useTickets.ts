@@ -7,6 +7,7 @@ import type { Ticket, TicketStatus } from '@/types';
 
 interface UseTicketsOptions {
   status?: TicketStatus | 'all';
+  search?: string;
   limitCount?: number;
 }
 
@@ -18,7 +19,7 @@ interface UseTicketsResult {
 }
 
 export function useTickets(options: UseTicketsOptions = {}): UseTicketsResult {
-  const { status = 'all', limitCount = 50 } = options;
+  const { status = 'all', search = '', limitCount = 50 } = options;
   const user = useAuthStore((s) => s.user);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +42,7 @@ export function useTickets(options: UseTicketsOptions = {}): UseTicketsResult {
 
       const params = new URLSearchParams();
       if (status !== 'all') params.set('status', status);
-      if (u.role !== 'client') params.set('all', 'true');
+      if (search) params.set('search', search);
 
       try {
         const data = await apiFetch(`/api/tickets?${params.toString()}`);
@@ -62,7 +63,7 @@ export function useTickets(options: UseTicketsOptions = {}): UseTicketsResult {
     return () => {
       cancelled = true;
     };
-  }, [user, status, limitCount, refreshKey]);
+  }, [user, status, search, limitCount, refreshKey]);
 
   function refresh() {
     setRefreshKey((k) => k + 1);

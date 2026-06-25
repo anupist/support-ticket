@@ -64,7 +64,10 @@ const PERMISSION_MATRIX: Record<Role, Set<Action>> = {
   ]),
 };
 
-export function can(userRole: Role, action: Action): boolean {
+export function can(userRole: Role, action: Action, customPermissions?: string[]): boolean {
+  if (customPermissions) {
+    return customPermissions.includes(action);
+  }
   return PERMISSION_MATRIX[userRole]?.has(action) ?? false;
 }
 
@@ -86,8 +89,11 @@ export function canTransitionStatus(
 export function canAccessTicket(
   userRole: Role,
   userId: string,
-  ticketCreatorId: string
+  ticketCreatorId: string,
+  ticketAssignedTo?: string | null
 ): boolean {
-  if (userRole !== 'client') return true;
-  return userId === ticketCreatorId;
+  if (userRole === 'super_admin') return true;
+  if (userRole === 'client') return userId === ticketCreatorId;
+  if (userRole === 'agent') return userId === ticketAssignedTo || userId === ticketCreatorId;
+  return false;
 }

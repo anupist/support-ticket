@@ -22,25 +22,41 @@ model Organization {
 }
 
 model User {
-  id             String   @id
-  email          String   @unique
-  passwordHash   String   @map("password_hash")
-  displayName    String   @default("") @map("display_name")
-  avatarUrl      String   @default("") @map("avatar_url")
-  role           String   @default("client")
-  tenantId       String   @map("tenant_id")
-  organizationId String   @map("organization_id")
-  isActive       Boolean  @default(true) @map("is_active")
-  preferences    Json     @default("{}")
-  metadata       Json     @default("{}")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id                 String   @id
+  email              String   @unique
+  passwordHash       String   @map("password_hash")
+  displayName        String   @default("") @map("display_name")
+  avatarUrl          String   @default("") @map("avatar_url")
+  role               String   @default("client")
+  customRoleId       String?  @map("custom_role_id")
+  mustChangePassword Boolean  @default(false) @map("must_change_password")
+  tenantId           String   @map("tenant_id")
+  organizationId     String   @map("organization_id")
+  isActive           Boolean  @default(true) @map("is_active")
+  preferences        Json     @default("{}")
+  metadata           Json     @default("{}")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
   sessions    Session[]
+  customRole  CustomRole? @relation(fields: [customRoleId], references: [id])
 
   @@index([tenantId])
   @@index([role])
   @@map("users")
+}
+
+model CustomRole {
+  id          String   @id @default(uuid())
+  name        String
+  permissions Json     @default("[]")
+  tenantId    String   @map("tenant_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  users User[]
+
+  @@index([tenantId])
+  @@map("custom_roles")
 }
 
 model Session {

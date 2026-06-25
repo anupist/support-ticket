@@ -8,6 +8,7 @@ export interface AuthenticatedUser {
   tenantId: string;
   displayName: string;
   avatarUrl: string;
+  customPermissions?: string[];
 }
 
 export async function verifyAuth(request: Request): Promise<AuthenticatedUser> {
@@ -33,6 +34,16 @@ export async function verifySession(sessionToken: string): Promise<Authenticated
     throw new UnauthorizedError('Invalid or expired session');
   }
 
+  let customPermissions: string[] | undefined;
+  if (session.user.customRoleId) {
+    const customRole = await prisma.customRole.findUnique({
+      where: { id: session.user.customRoleId },
+    });
+    if (customRole) {
+      customPermissions = customRole.permissions as string[];
+    }
+  }
+
   return {
     uid: session.user.id,
     email: session.user.email,
@@ -40,5 +51,6 @@ export async function verifySession(sessionToken: string): Promise<Authenticated
     tenantId: session.user.tenantId,
     displayName: session.user.displayName,
     avatarUrl: session.user.avatarUrl,
+    customPermissions,
   };
 }

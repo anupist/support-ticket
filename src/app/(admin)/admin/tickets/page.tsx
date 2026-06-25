@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { useTickets } from '@/hooks/useTickets';
@@ -11,17 +11,31 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PriorityBadge } from '@/components/shared/PriorityBadge';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { TicketListSkeleton } from '@/components/shared/LoadingSkeleton';
-import { Ticket, Search } from 'lucide-react';
+import { Ticket, Search, X } from 'lucide-react';
 import { RelativeTime } from '@/components/relative-time';
+import { formatDate } from '@/lib/utils';
 import type { TicketStatus } from '@/types';
 
 const STATUS_FILTERS = ['all', 'open', 'in_progress', 'resolved', 'closed'] as const;
 
 function AdminTicketsContent() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
   const { tickets, loading } = useTickets({
     status: statusFilter as TicketStatus | 'all',
+    search: debouncedSearch,
   });
+
+  const handleSearch = useCallback((value: string) => {
+    setSearchQuery(value);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(value);
+    }, 300);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -31,10 +45,6 @@ function AdminTicketsContent() {
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search tickets..." className="pl-9" />
-        </div>
         <div className="flex gap-1 overflow-x-auto">
           {STATUS_FILTERS.map((status) => (
             <Button
@@ -47,6 +57,23 @@ function AdminTicketsContent() {
             </Button>
           ))}
         </div>
+        <div className="relative flex-1 max-w-sm ml-auto">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search tickets..."
+            className="pl-9 pr-8"
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => { setSearchQuery(''); setDebouncedSearch(''); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -55,7 +82,7 @@ function AdminTicketsContent() {
         <EmptyState
           icon={<Ticket className="h-12 w-12" />}
           title="No tickets found"
-          description={statusFilter !== 'all' ? `No tickets with status "${statusFilter}"` : 'No tickets have been created yet.'}
+          description={searchQuery ? `No tickets matching "${searchQuery}"` : statusFilter !== 'all' ? `No tickets with status "${statusFilter}"` : 'No tickets have been created yet.'}
         />
       ) : (
         <div className="space-y-3">
@@ -80,6 +107,9 @@ function AdminTicketsContent() {
                         <span>{ticket.createdByName}</span>
                         <span>{ticket.lastMessagePreview?.substring(0, 60) || ''}</span>
                       </div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Created {formatDate(ticket.createdAt)}
+                      </p>
                     </div>
                     <div className="text-xs text-muted-foreground whitespace-nowrap ml-4">
                       <RelativeTime date={ticket.lastActivityAt || ticket.createdAt} />

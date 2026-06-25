@@ -2,29 +2,45 @@
 
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { PusherProvider } from '@/providers/PusherProvider';
+import { useAuthStore } from '@/stores/authStore';
 import { ProfileDropdown } from '@/components/ProfileDropdown';
 import { NotificationBell } from '@/components/NotificationBell';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { can } from '@/lib/permissions';
+import type { Role } from '@/types';
 import {
   LayoutDashboard,
   Ticket,
   Users,
   FolderTree,
   Settings,
+  Shield,
 } from 'lucide-react';
 
-const navItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/tickets', label: 'Tickets', icon: Ticket },
-  { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/categories', label: 'Categories', icon: FolderTree },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
+type NavItem = { href: string; label: string; icon: any; permission?: string };
+
+const allNavItems: NavItem[] = [
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, permission: 'dashboard.view' },
+  { href: '/admin/tickets', label: 'Tickets', icon: Ticket, permission: 'ticket.list' },
+  { href: '/admin/users', label: 'Users', icon: Users, permission: 'user.list' },
+  { href: '/admin/roles', label: 'Roles', icon: Shield, permission: 'user.manage' },
+  { href: '/admin/categories', label: 'Categories', icon: FolderTree, permission: 'category.manage' },
+  { href: '/admin/settings', label: 'Settings', icon: Settings, permission: 'settings.view' },
 ];
 
 function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const storeUser = useAuthStore((s) => s.user);
+  const role = storeUser?.role as Role | undefined;
+  const customPermissions = storeUser ? (storeUser as any).customPermissions : undefined;
+
+  const navItems = allNavItems.filter((item) => {
+    if (!item.permission) return true;
+    if (!role) return false;
+    return can(role, item.permission as any, customPermissions);
+  });
 
   return (
     <div className="flex h-screen overflow-hidden">

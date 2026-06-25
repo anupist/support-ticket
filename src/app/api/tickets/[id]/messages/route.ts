@@ -15,7 +15,7 @@ import type { Role } from '@/types';
 export const GET = createHandler(async (req, { user, params }) => {
   const ticket = await getTicket(params.id);
 
-  if (!canAccessTicket(user.role as Role, user.uid, ticket.createdBy)) {
+    if (!canAccessTicket(user.role as Role, user.uid, ticket.createdBy, ticket.assignedTo)) {
     throw new ForbiddenError();
   }
 
@@ -76,7 +76,7 @@ export const POST = createHandler(
 
     const ticket = await getTicket(params.id);
 
-    if (!canAccessTicket(user.role as Role, user.uid, ticket.createdBy)) {
+  if (!canAccessTicket(user.role as Role, user.uid, ticket.createdBy, ticket.assignedTo)) {
       throw new ForbiddenError();
     }
 
@@ -151,10 +151,9 @@ export const POST = createHandler(
       },
     };
 
-    if (parsed.data.messageType === 'public') {
-      const isClientSender = user.role === 'client';
-      const targetRoles: string[] = isClientSender ? ['agent', 'super_admin'] : ['client'];
+    const isClientSender = user.role === 'client';
 
+    if (parsed.data.messageType === 'public') {
       if (isClientSender) {
         await createNotificationForStaff({
           type: 'message.added',
@@ -167,43 +166,64 @@ export const POST = createHandler(
           metadata: { messageType: parsed.data.messageType },
         });
       } else {
-        await createNotificationForRole('client', {
-          type: 'message.added',
-          title: `New message on ${ticket.ticketNumber}`,
-          body: parsed.data.body.substring(0, 100),
-          ticketId: params.id,
-          ticketNumber: ticket.ticketNumber,
-          actorId: user.uid,
-          actorName: user.displayName || user.email,
-          metadata: { messageType: parsed.data.messageType },
-        });
+        await Promise.all([
+          createNotificationForRole('client', {
+            type: 'message.added',
+            title: `New message on ${ticket.ticketNumber}`,
+            body: parsed.data.body.substring(0, 100),
+            ticketId: params.id,
+            ticketNumber: ticket.ticketNumber,
+            actorId: user.uid,
+            actorName: user.displayName || user.email,
+            metadata: { messageType: parsed.data.messageType },
+          }),
+          createNotificationForStaff({
+            type: 'message.added',
+            title: `New message on ${ticket.ticketNumber} (to ${ticket.createdByName})`,
+            body: parsed.data.body.substring(0, 100),
+            ticketId: params.id,
+            ticketNumber: ticket.ticketNumber,
+            actorId: user.uid,
+            actorName: user.displayName || user.email,
+            metadata: { messageType: parsed.data.messageType },
+          }),
+        ]);
       }
 
-      const recipientUsers = await prisma.user.findMany({
-        where: {
-          role: { in: targetRoles },
-          tenantId: DEFAULT_TENANT_ID,
-          isActive: true,
-        },
+      const notifyRoles = isClientSender ? ['agent', 'super_admin'] : ['client', 'agent', 'super_admin'];
+      const allRecipients = await prisma.user.findMany({
+        where: { role: { in: notifyRoles }, tenantId: DEFAULT_TENANT_ID, isActive: true },
         select: { id: true, email: true, displayName: true },
       });
-      const recipientIds = recipientUsers.map((u) => u.id);
+      const recipientIds = allRecipients.map((u) => u.id);
       if (recipientIds.length > 0) {
         await triggerNotificationBatch(recipientIds, 'ticket.new-message', messagePayload);
       }
 
       const messageLink = `${process.env.NEXT_PUBLIC_APP_URL}/${isClientSender ? 'admin' : 'portal'}/tickets/${params.id}`;
-      for (const r of recipientUsers) {
+      for (const r of allRecipients) {
         await sendTicketMessageEmail(r.email, r.displayName, ticket.ticketNumber, user.displayName || user.email, parsed.data.body.substring(0, 200), messageLink).catch(() => {});
       }
-    } else if (user.role !== 'client') {
-      await triggerNotification(ticket.createdBy, 'ticket.new-message', messagePayload);
-
-      const creator = await prisma.user.findUnique({ where: { id: ticket.createdBy }, select: { email: true, displayName: true } });
-      if (creator) {
-        const clientLink = `${process.env.NEXT_PUBLIC_APP_URL}/portal/tickets/${params.id}`;
-        await sendTicketMessageEmail(creator.email, creator.displayName, ticket.ticketNumber, user.displayName || user.email, parsed.data.body.substring(0, 200), clientLink).catch(() => {});
-      }
+    } else if (!isClientSender) {
+      await Promise.all([
+        createNotificationForStaff({
+          type: 'message.internal_note',
+          title: `Internal note on ${ticket.ticketNumber}`,
+          body: parsed.data.body.substring(0, 100),
+          ticketId: params.id,
+          ticketNumber: ticket.ticketNumber,
+          actorId: user.uid,
+          actorName: user.displayName || user.email,
+          metadata: { messageType: 'internal_note' },
+        }),
+        triggerNotificationBatch(
+          (await prisma.user.findMany({
+            where: { role: { in: ['agent', 'super_admin'] }, tenantId: DEFAULT_TENANT_ID, isActive: true },
+            select: { id: true },
+          })).map((u) => u.id),
+          'ticket.new-message', messagePayload
+        ),
+      ]);
     }
 
     await logActivity({
