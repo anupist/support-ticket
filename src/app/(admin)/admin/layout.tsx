@@ -22,7 +22,7 @@ import {
 type NavItem = { href: string; label: string; icon: any; permission?: string };
 
 const allNavItems: NavItem[] = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, permission: 'dashboard.view' },
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/tickets', label: 'Tickets', icon: Ticket, permission: 'ticket.list' },
   { href: '/admin/users', label: 'Users', icon: Users, permission: 'user.list' },
   { href: '/admin/roles', label: 'Roles', icon: Shield, permission: 'user.manage' },
