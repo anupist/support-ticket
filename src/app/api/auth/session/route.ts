@@ -39,12 +39,17 @@ export async function POST(request: Request) {
     });
 
     const metadata = (user.metadata as any) || {};
-    const isFirstLogin = !metadata.lastLoginAt;
 
     await prisma.user.update({
       where: { id: user.id },
       data: { metadata: { ...metadata, lastLoginAt: Date.now() } },
     });
+
+    let customPermissions: string[] | undefined;
+    if (user.customRoleId) {
+      const customRole = await prisma.customRole.findUnique({ where: { id: user.customRoleId } });
+      if (customRole) customPermissions = customRole.permissions as string[];
+    }
 
     const response = NextResponse.json({
       user: {
@@ -54,6 +59,7 @@ export async function POST(request: Request) {
         role: user.role,
         tenantId: user.tenantId,
         avatarUrl: user.avatarUrl,
+        customPermissions,
       },
       mustChangePassword: user.mustChangePassword,
     });
