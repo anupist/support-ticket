@@ -3,7 +3,37 @@
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { useTickets } from '@/hooks/useTickets';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Ticket, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Ticket, Clock, CheckCircle, XCircle, TrendingUp, PieChart as PieChartIcon } from 'lucide-react';
+import { TicketTrendChart } from '@/components/charts/TicketTrendChart';
+import { StatusDonutChart } from '@/components/charts/StatusDonutChart';
+
+function StatCard({ title, value, icon: Icon, color }: { title: string; value: string | number; icon: any; color: string }) {
+  return (
+    <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <Icon className={`h-4 w-4 ${color}`} />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ChartCard({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) {
+  return (
+    <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+          <Icon className="h-4 w-4" />
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  );
+}
 
 function DashboardContent() {
   const { user } = useAuth();
@@ -15,61 +45,32 @@ function DashboardContent() {
   const resolvedTickets = tickets.filter((t) => t.status === 'resolved').length;
   const closedTickets = tickets.filter((t) => t.status === 'closed').length;
 
+  const dash = (v: number) => loading ? '-' : v;
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">
+        <h1 className="text-2xl font-bold text-foreground">
           Welcome{user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}
         </h1>
         <p className="text-muted-foreground">View your support tickets</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
-            <Ticket className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{loading ? '-' : totalTickets}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Open</CardTitle>
-            <Ticket className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{loading ? '-' : openTickets}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <Clock className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{loading ? '-' : inProgressTickets}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Resolved</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{loading ? '-' : resolvedTickets}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Closed</CardTitle>
-            <XCircle className="h-4 w-4 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{loading ? '-' : closedTickets}</div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
+        <StatCard title="Total Tickets" value={dash(totalTickets)} icon={Ticket} color="text-muted-foreground" />
+        <StatCard title="Open" value={dash(openTickets)} icon={Ticket} color="text-amber-500" />
+        <StatCard title="In Progress" value={dash(inProgressTickets)} icon={Clock} color="text-blue-500" />
+        <StatCard title="Resolved" value={dash(resolvedTickets)} icon={CheckCircle} color="text-green-500" />
+        <StatCard title="Closed" value={dash(closedTickets)} icon={XCircle} color="text-gray-500" />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <ChartCard title="Ticket Trend (30 days)" icon={TrendingUp}>
+          <TicketTrendChart />
+        </ChartCard>
+        <ChartCard title="Status Distribution" icon={PieChartIcon}>
+          <StatusDonutChart />
+        </ChartCard>
       </div>
     </div>
   );
