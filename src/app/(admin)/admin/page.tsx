@@ -60,7 +60,7 @@ function AdminDashboard() {
         <p className="text-muted-foreground">Overview of support activity</p>
       </div>
 
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+      <div className={`grid gap-4 grid-cols-2 md:grid-cols-3 ${isSuperAdmin ? 'lg:grid-cols-6' : 'lg:grid-cols-5'}`}>
         <StatCard title="Total Tickets" value={dash(totalTickets)} icon={Ticket} color="text-muted-foreground" />
         <StatCard title="Open" value={dash(openTickets)} icon={Ticket} color="text-amber-500" />
         <StatCard title="In Progress" value={dash(inProgressTickets)} icon={Clock} color="text-blue-500" />
@@ -69,16 +69,18 @@ function AdminDashboard() {
         {isSuperAdmin && <StatCard title="Unassigned" value={dash(unassignedTickets)} icon={Users} color="text-red-500" />}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="space-y-4">
         <ChartCard title="Ticket Trend (30 days)" icon={TrendingUp}>
           <TicketTrendChart />
         </ChartCard>
-        <ChartCard title="Status Distribution" icon={PieChartIcon}>
-          <StatusDonutChart />
-        </ChartCard>
-        <ChartCard title="Priority Breakdown" icon={BarChart3}>
-          <PriorityBarChart />
-        </ChartCard>
+        <div className="grid gap-4 md:grid-cols-2">
+          <ChartCard title="Status Distribution" icon={PieChartIcon}>
+            <StatusDonutChart />
+          </ChartCard>
+          <ChartCard title="Priority Breakdown" icon={BarChart3}>
+            <PriorityBarChart />
+          </ChartCard>
+        </div>
       </div>
 
       {isSuperAdmin && (
