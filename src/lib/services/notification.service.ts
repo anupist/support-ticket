@@ -80,17 +80,19 @@ function mapNotificationRow(row: any) {
 }
 
 export async function createNotificationForStaff(
-  input: Omit<CreateNotificationInput, 'userId'>
+  input: Omit<CreateNotificationInput, 'userId'>,
+  excludeUserId?: string
 ): Promise<void> {
   await Promise.all([
-    createNotificationForRole('agent', input),
-    createNotificationForRole('super_admin', input),
+    createNotificationForRole('agent', input, excludeUserId),
+    createNotificationForRole('super_admin', input, excludeUserId),
   ]);
 }
 
 export async function createNotificationForRole(
   role: Role,
-  input: Omit<CreateNotificationInput, 'userId'>
+  input: Omit<CreateNotificationInput, 'userId'>,
+  excludeUserId?: string
 ): Promise<void> {
   const users = await prisma.user.findMany({
     where: {
@@ -103,8 +105,11 @@ export async function createNotificationForRole(
 
   if (users.length === 0) return;
 
+  const filtered = excludeUserId ? users.filter((u) => u.id !== excludeUserId) : users;
+  if (filtered.length === 0) return;
+
   const notifications = await Promise.all(
-    users.map((user) =>
+    filtered.map((user) =>
       prisma.notification.create({
         data: {
           userId: user.id,

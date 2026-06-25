@@ -80,7 +80,7 @@ export const POST = createHandler(
       throw new ForbiddenError();
     }
 
-    if (parsed.data.messageType === 'internal_note' && !can(user.role as Role, 'message.reply_internal')) {
+    if (parsed.data.messageType === 'internal_note' && !can(user.role as Role, 'message.reply_internal', user.customPermissions)) {
       throw new ForbiddenError();
     }
 
@@ -164,7 +164,7 @@ export const POST = createHandler(
           actorId: user.uid,
           actorName: user.displayName || user.email,
           metadata: { messageType: parsed.data.messageType },
-        });
+        }, user.uid);
       } else {
         await Promise.all([
           createNotificationForRole('client', {
@@ -176,7 +176,7 @@ export const POST = createHandler(
             actorId: user.uid,
             actorName: user.displayName || user.email,
             metadata: { messageType: parsed.data.messageType },
-          }),
+          }, user.uid),
           createNotificationForStaff({
             type: 'message.added',
             title: `New message on ${ticket.ticketNumber} (to ${ticket.createdByName})`,
@@ -186,7 +186,7 @@ export const POST = createHandler(
             actorId: user.uid,
             actorName: user.displayName || user.email,
             metadata: { messageType: parsed.data.messageType },
-          }),
+          }, user.uid),
         ]);
       }
 
@@ -195,16 +195,21 @@ export const POST = createHandler(
         where: { role: { in: notifyRoles }, tenantId: DEFAULT_TENANT_ID, isActive: true },
         select: { id: true, email: true, displayName: true },
       });
-      const recipientIds = allRecipients.map((u) => u.id);
+      const recipientIds = allRecipients.filter((r) => r.id !== user.uid).map((r) => r.id);
       if (recipientIds.length > 0) {
         await triggerNotificationBatch(recipientIds, 'ticket.new-message', messagePayload);
       }
 
       const messageLink = `${process.env.NEXT_PUBLIC_APP_URL}/${isClientSender ? 'admin' : 'portal'}/tickets/${params.id}`;
       for (const r of allRecipients) {
+        if (r.id === user.uid) continue;
         await sendTicketMessageEmail(r.email, r.displayName, ticket.ticketNumber, user.displayName || user.email, parsed.data.body.substring(0, 200), messageLink).catch(() => {});
       }
     } else if (!isClientSender) {
+      const staffRecipients = await prisma.user.findMany({
+        where: { role: { in: ['agent', 'super_admin'] }, tenantId: DEFAULT_TENANT_ID, isActive: true },
+        select: { id: true },
+      });
       await Promise.all([
         createNotificationForStaff({
           type: 'message.internal_note',
@@ -215,12 +220,9 @@ export const POST = createHandler(
           actorId: user.uid,
           actorName: user.displayName || user.email,
           metadata: { messageType: 'internal_note' },
-        }),
+        }, user.uid),
         triggerNotificationBatch(
-          (await prisma.user.findMany({
-            where: { role: { in: ['agent', 'super_admin'] }, tenantId: DEFAULT_TENANT_ID, isActive: true },
-            select: { id: true },
-          })).map((u) => u.id),
+          staffRecipients.filter((u) => u.id !== user.uid).map((u) => u.id),
           'ticket.new-message', messagePayload
         ),
       ]);
@@ -253,5 +255,5 @@ export const POST = createHandler(
 
     return NextResponse.json({ message: response, status }, { status: 201 });
   },
-  { permissions: ['message.create'] }
+  { permissions: ['message.reply_public'] }
 );
