@@ -15,7 +15,7 @@ import { Ticket, Search } from 'lucide-react';
 import { RelativeTime } from '@/components/relative-time';
 import type { TicketStatus } from '@/types';
 
-const STATUS_FILTERS = ['all', 'open', 'in_progress', 'waiting_on_client', 'waiting_on_agent', 'resolved', 'closed'] as const;
+const STATUS_FILTERS = ['all', 'open', 'in_progress', 'resolved', 'closed'] as const;
 
 function AdminTicketsContent() {
   const [statusFilter, setStatusFilter] = useState<string>('all');

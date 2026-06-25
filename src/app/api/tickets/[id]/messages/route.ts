@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createHandler } from '@/lib/api-handler';
 import { prisma } from '@/lib/prisma';
 import { getTicket } from '@/lib/services/ticket.service';
-import { createNotificationForRole } from '@/lib/services/notification.service';
+import { createNotificationForRole, createNotificationForStaff } from '@/lib/services/notification.service';
 import { logActivity } from '@/lib/services/activity.service';
 import { createMessageSchema } from '@/lib/validations/message.schema';
 import { can, canAccessTicket } from '@/lib/permissions';
@@ -32,20 +32,31 @@ export const GET = createHandler(async (req, { user, params }) => {
     return true;
   });
 
-  const mapped = filtered.map((row) => ({
-    id: row.id,
-    body: row.body,
-    messageType: row.messageType,
-    createdBy: row.createdBy,
-    createdByName: row.createdByName,
-    createdByRole: row.createdByRole,
-    attachments: row.attachments || [],
-    isEdited: row.isEdited,
-    editedAt: row.editedAt ? new Date(row.editedAt).getTime() : null,
-    tenantId: row.tenantId,
-    createdAt: new Date(row.createdAt).getTime(),
-    updatedAt: new Date(row.updatedAt).getTime(),
-  }));
+  const userIds = [...new Set(filtered.map((m) => m.createdBy))];
+  const userRecords = await prisma.user.findMany({
+    where: { id: { in: userIds } },
+    select: { id: true, displayName: true, avatarUrl: true },
+  });
+  const userMap = new Map(userRecords.map((u) => [u.id, u]));
+
+  const mapped = filtered.map((row) => {
+    const sender = userMap.get(row.createdBy);
+    return {
+      id: row.id,
+      body: row.body,
+      messageType: row.messageType,
+      createdBy: row.createdBy,
+      createdByName: sender?.displayName || row.createdByName,
+      createdByAvatarUrl: sender?.avatarUrl || '',
+      createdByRole: row.createdByRole,
+      attachments: row.attachments || [],
+      isEdited: row.isEdited,
+      editedAt: row.editedAt ? new Date(row.editedAt).getTime() : null,
+      tenantId: row.tenantId,
+      createdAt: new Date(row.createdAt).getTime(),
+      updatedAt: new Date(row.updatedAt).getTime(),
+    };
+  });
 
   return NextResponse.json({ messages: mapped });
 });
@@ -75,24 +86,37 @@ export const POST = createHandler(
 
     const now = new Date();
 
+    let attachments: any[] = [];
+    if (parsed.data.attachmentIds?.length) {
+      const mediaRecords = await prisma.media.findMany({
+        where: { id: { in: parsed.data.attachmentIds }, userId: user.uid },
+      });
+      attachments = mediaRecords.map((m) => ({
+        id: m.id,
+        fileName: m.originalName,
+        fileSize: m.size,
+        mimeType: m.mimeType,
+        url: `/api/media/${m.id}`,
+        uploadedAt: now.getTime(),
+      }));
+    }
+
     const messageData = await prisma.ticketMessage.create({
       data: {
         ticketId: params.id,
         body: parsed.data.body,
         messageType: parsed.data.messageType,
         createdBy: user.uid,
-        createdByName: user.email,
+        createdByName: user.displayName || user.email,
         createdByRole: user.role,
-        attachments: [],
+        attachments: attachments,
         tenantId: DEFAULT_TENANT_ID,
       },
     });
 
     let status = ticket.status;
-    if (user.role === 'client' && ticket.status !== 'closed') {
-      status = 'waiting_on_agent';
-    } else if (user.role !== 'client' && ticket.status !== 'closed') {
-      status = 'waiting_on_client';
+    if (user.role !== 'client' && ticket.status !== 'closed' && ticket.status !== 'resolved') {
+      status = 'in_progress';
     }
 
     await prisma.ticket.update({
@@ -116,6 +140,7 @@ export const POST = createHandler(
         messageType: messageData.messageType,
         createdBy: messageData.createdBy,
         createdByName: messageData.createdByName,
+        createdByAvatarUrl: user.avatarUrl,
         createdByRole: messageData.createdByRole,
         attachments: messageData.attachments || [],
         isEdited: messageData.isEdited,
@@ -127,21 +152,36 @@ export const POST = createHandler(
     };
 
     if (parsed.data.messageType === 'public') {
-      const targetRole = user.role === 'client' ? 'agent' : 'client';
-      await createNotificationForRole(targetRole as Role, {
-        type: 'message.added',
-        title: `New message on ${ticket.ticketNumber}`,
-        body: parsed.data.body.substring(0, 100),
-        ticketId: params.id,
-        ticketNumber: ticket.ticketNumber,
-        actorId: user.uid,
-        actorName: user.email,
-        metadata: { messageType: parsed.data.messageType },
-      });
+      const isClientSender = user.role === 'client';
+      const targetRoles: string[] = isClientSender ? ['agent', 'super_admin'] : ['client'];
+
+      if (isClientSender) {
+        await createNotificationForStaff({
+          type: 'message.added',
+          title: `New message on ${ticket.ticketNumber}`,
+          body: parsed.data.body.substring(0, 100),
+          ticketId: params.id,
+          ticketNumber: ticket.ticketNumber,
+          actorId: user.uid,
+          actorName: user.displayName || user.email,
+          metadata: { messageType: parsed.data.messageType },
+        });
+      } else {
+        await createNotificationForRole('client', {
+          type: 'message.added',
+          title: `New message on ${ticket.ticketNumber}`,
+          body: parsed.data.body.substring(0, 100),
+          ticketId: params.id,
+          ticketNumber: ticket.ticketNumber,
+          actorId: user.uid,
+          actorName: user.displayName || user.email,
+          metadata: { messageType: parsed.data.messageType },
+        });
+      }
 
       const recipientUsers = await prisma.user.findMany({
         where: {
-          role: targetRole,
+          role: { in: targetRoles },
           tenantId: DEFAULT_TENANT_ID,
           isActive: true,
         },
@@ -152,9 +192,9 @@ export const POST = createHandler(
         await triggerNotificationBatch(recipientIds, 'ticket.new-message', messagePayload);
       }
 
-      const messageLink = `${process.env.NEXT_PUBLIC_APP_URL}/${targetRole === 'client' ? 'portal' : 'admin'}/tickets/${params.id}`;
+      const messageLink = `${process.env.NEXT_PUBLIC_APP_URL}/${isClientSender ? 'admin' : 'portal'}/tickets/${params.id}`;
       for (const r of recipientUsers) {
-        await sendTicketMessageEmail(r.email, r.displayName, ticket.ticketNumber, user.email, parsed.data.body.substring(0, 200), messageLink).catch(() => {});
+        await sendTicketMessageEmail(r.email, r.displayName, ticket.ticketNumber, user.displayName || user.email, parsed.data.body.substring(0, 200), messageLink).catch(() => {});
       }
     } else if (user.role !== 'client') {
       await triggerNotification(ticket.createdBy, 'ticket.new-message', messagePayload);
@@ -162,7 +202,7 @@ export const POST = createHandler(
       const creator = await prisma.user.findUnique({ where: { id: ticket.createdBy }, select: { email: true, displayName: true } });
       if (creator) {
         const clientLink = `${process.env.NEXT_PUBLIC_APP_URL}/portal/tickets/${params.id}`;
-        await sendTicketMessageEmail(creator.email, creator.displayName, ticket.ticketNumber, user.email, parsed.data.body.substring(0, 200), clientLink).catch(() => {});
+        await sendTicketMessageEmail(creator.email, creator.displayName, ticket.ticketNumber, user.displayName || user.email, parsed.data.body.substring(0, 200), clientLink).catch(() => {});
       }
     }
 
@@ -171,7 +211,7 @@ export const POST = createHandler(
       entityType: 'ticket',
       entityId: params.id,
       performedBy: user.uid,
-      performedByName: user.email,
+      performedByName: user.displayName || user.email,
       metadata: { messageType: parsed.data.messageType, preview: parsed.data.body.substring(0, 100) },
     });
 
@@ -181,6 +221,7 @@ export const POST = createHandler(
       messageType: messageData.messageType,
       createdBy: messageData.createdBy,
       createdByName: messageData.createdByName,
+      createdByAvatarUrl: user.avatarUrl,
       createdByRole: messageData.createdByRole,
       attachments: messageData.attachments || [],
       isEdited: messageData.isEdited,

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createHandler } from '@/lib/api-handler';
 import { prisma } from '@/lib/prisma';
 import { createTicket, getTicketsByFilter } from '@/lib/services/ticket.service';
-import { createNotificationForRole } from '@/lib/services/notification.service';
+import { createNotificationForStaff } from '@/lib/services/notification.service';
 import { logActivity } from '@/lib/services/activity.service';
 import { sendTicketCreatedEmail } from '@/lib/services/mail.service';
 import { createTicketSchema } from '@/lib/validations/ticket.schema';
@@ -37,23 +37,23 @@ export const POST = createHandler(
       );
     }
 
-    const ticket = await createTicket(parsed.data, user.uid, user.email);
+    const ticket = await createTicket(parsed.data, user.uid, user.displayName || user.email);
 
     const createdLink = `${process.env.NEXT_PUBLIC_APP_URL}/admin/tickets/${ticket.id}`;
 
-    await createNotificationForRole('agent', {
+    await createNotificationForStaff({
       type: 'ticket.created',
       title: `New ticket: ${ticket.subject}`,
       body: `A new ${ticket.priority} priority ticket was created`,
       ticketId: ticket.id,
       ticketNumber: ticket.ticketNumber,
       actorId: user.uid,
-      actorName: user.email,
+      actorName: user.displayName || user.email,
       metadata: { priority: ticket.priority },
     });
 
     const agents = await prisma.user.findMany({
-      where: { role: 'agent', tenantId: DEFAULT_TENANT_ID, isActive: true },
+      where: { role: { in: ['agent', 'super_admin'] }, tenantId: DEFAULT_TENANT_ID, isActive: true },
     });
     for (const agent of agents) {
       await sendTicketCreatedEmail(agent.email, agent.displayName, ticket.ticketNumber, ticket.subject, createdLink).catch(() => {});
@@ -64,7 +64,7 @@ export const POST = createHandler(
       entityType: 'ticket',
       entityId: ticket.id,
       performedBy: user.uid,
-      performedByName: user.email,
+      performedByName: user.displayName || user.email,
       metadata: { subject: ticket.subject, priority: ticket.priority },
     });
 

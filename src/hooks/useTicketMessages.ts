@@ -13,7 +13,7 @@ interface UseTicketMessagesResult {
   error: string | null;
   hasMore: boolean;
   loadMore: () => void;
-  sendMessage: (body: string, messageType: MessageType) => Promise<TicketMessage | null>;
+  sendMessage: (body: string, messageType: MessageType, attachmentIds?: string[]) => Promise<TicketMessage | null>;
   refresh: () => void;
 }
 
@@ -100,7 +100,7 @@ export function useTicketMessages(ticketId: string | null): UseTicketMessagesRes
     // Pagination placeholder
   }
 
-  async function sendMessage(body: string, messageType: MessageType): Promise<TicketMessage | null> {
+  async function sendMessage(body: string, messageType: MessageType, attachmentIds?: string[]): Promise<TicketMessage | null> {
     if (!ticketId) return null;
 
     const now = Date.now();
@@ -125,7 +125,7 @@ export function useTicketMessages(ticketId: string | null): UseTicketMessagesRes
     try {
       const res = await apiFetch(`/api/tickets/${ticketId}/messages`, {
         method: 'POST',
-        body: JSON.stringify({ body, messageType }),
+        body: JSON.stringify({ body, messageType, attachmentIds }),
       });
 
       const serverMsg = res.message;
@@ -138,6 +138,7 @@ export function useTicketMessages(ticketId: string | null): UseTicketMessagesRes
             messageType: serverMsg.messageType,
             createdBy: serverMsg.createdBy,
             createdByName: serverMsg.createdByName,
+            createdByAvatarUrl: serverMsg.createdByAvatarUrl || '',
             createdByRole: serverMsg.createdByRole,
             attachments: serverMsg.attachments || [],
             isEdited: serverMsg.isEdited || false,

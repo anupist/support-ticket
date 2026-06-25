@@ -3,8 +3,6 @@ import type { TicketStatus, TicketPriority, Role, NotificationType } from '@/typ
 export const TICKET_STATUSES: TicketStatus[] = [
   'open',
   'in_progress',
-  'waiting_on_client',
-  'waiting_on_agent',
   'resolved',
   'closed',
 ];
@@ -19,10 +17,8 @@ export const TICKET_PRIORITIES: TicketPriority[] = [
 export const ROLES: Role[] = ['client', 'agent', 'super_admin'];
 
 export const STATUS_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
-  open: ['in_progress', 'waiting_on_agent', 'closed'],
-  in_progress: ['waiting_on_client', 'resolved', 'closed'],
-  waiting_on_client: ['in_progress', 'closed'],
-  waiting_on_agent: ['in_progress', 'resolved', 'closed'],
+  open: ['in_progress', 'closed'],
+  in_progress: ['resolved', 'closed'],
   resolved: ['closed', 'open'],
   closed: ['open'],
 };
@@ -41,8 +37,6 @@ export const NOTIFICATION_TYPES: Record<string, NotificationType> = {
 export const STATUS_LABELS: Record<TicketStatus, string> = {
   open: 'Open',
   in_progress: 'In Progress',
-  waiting_on_client: 'Waiting on Client',
-  waiting_on_agent: 'Waiting on Agent',
   resolved: 'Resolved',
   closed: 'Closed',
 };

@@ -10,16 +10,28 @@ import type { Notification, TicketMessage } from '@/types';
 export function PusherProvider({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
   const addNotification = useNotificationStore((s) => s.addNotification);
+  const setNotifications = useNotificationStore((s) => s.setNotifications);
   const markRead = useNotificationStore((s) => s.markRead);
   const markAllRead = useNotificationStore((s) => s.markAllRead);
   const addPendingMessage = useMessageStore((s) => s.addPending);
   const subscribedRef = useRef(false);
+  const hydratedRef = useRef(false);
 
   useEffect(() => {
     if (!user) {
       subscribedRef.current = false;
       disconnectPusher();
       return;
+    }
+
+    if (!hydratedRef.current) {
+      hydratedRef.current = true;
+      fetch('/api/notifications')
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.notifications) setNotifications(data.notifications);
+        })
+        .catch(() => {});
     }
 
     if (subscribedRef.current) return;

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createHandler } from '@/lib/api-handler';
 import { prisma } from '@/lib/prisma';
 import { getTicket, updateTicket } from '@/lib/services/ticket.service';
-import { createNotificationForRole } from '@/lib/services/notification.service';
+import { createNotificationForStaff } from '@/lib/services/notification.service';
 import { logActivity } from '@/lib/services/activity.service';
 import { sendTicketStatusEmail } from '@/lib/services/mail.service';
 import { updateTicketSchema } from '@/lib/validations/ticket.schema';
@@ -45,14 +45,14 @@ export const PATCH = createHandler(
     if (parsed.data.status) {
       const statusLink = `${process.env.NEXT_PUBLIC_APP_URL}/admin/tickets/${ticket.id}`;
 
-      await createNotificationForRole('agent', {
+      await createNotificationForStaff({
         type: 'ticket.status_changed',
         title: `Ticket ${ticket.ticketNumber}: Status changed to ${parsed.data.status}`,
         body: `Status changed from ${ticket.status} to ${parsed.data.status}`,
         ticketId: ticket.id,
         ticketNumber: ticket.ticketNumber,
         actorId: user.uid,
-        actorName: user.email,
+        actorName: user.displayName || user.email,
         metadata: { from: ticket.status, to: parsed.data.status },
       });
 
@@ -66,7 +66,7 @@ export const PATCH = createHandler(
         entityType: 'ticket',
         entityId: ticket.id,
         performedBy: user.uid,
-        performedByName: user.email,
+        performedByName: user.displayName || user.email,
         metadata: { from: ticket.status, to: parsed.data.status },
       });
     }

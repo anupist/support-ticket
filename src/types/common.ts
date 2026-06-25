@@ -12,8 +12,6 @@ export type Role = 'client' | 'agent' | 'super_admin';
 export type TicketStatus =
   | 'open'
   | 'in_progress'
-  | 'waiting_on_client'
-  | 'waiting_on_agent'
   | 'resolved'
   | 'closed';
 

@@ -2,8 +2,8 @@
 
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { PusherProvider } from '@/providers/PusherProvider';
-import { useUnreadCount } from '@/hooks/useUnreadCount';
 import { ProfileDropdown } from '@/components/ProfileDropdown';
+import { NotificationBell } from '@/components/NotificationBell';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -12,21 +12,18 @@ import {
   Ticket,
   Users,
   FolderTree,
-  Bell,
   Settings,
 } from 'lucide-react';
 
 const navItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, badge: false },
-  { href: '/admin/tickets', label: 'Tickets', icon: Ticket, badge: false },
-  { href: '/admin/users', label: 'Users', icon: Users, badge: false },
-  { href: '/admin/categories', label: 'Categories', icon: FolderTree, badge: false },
-  { href: '/admin/notifications', label: 'Notifications', icon: Bell, badge: true },
-  { href: '/admin/settings', label: 'Settings', icon: Settings, badge: false },
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/tickets', label: 'Tickets', icon: Ticket },
+  { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/categories', label: 'Categories', icon: FolderTree },
+  { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
 function AdminShell({ children }: { children: React.ReactNode }) {
-  const unreadCount = useUnreadCount();
   const pathname = usePathname();
 
   return (
@@ -50,14 +47,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
               >
-                <div className="relative">
-                  <Icon className="h-4 w-4" />
-                  {item.badge && unreadCount > 0 && (
-                    <span className="absolute -top-2 -right-2 flex h-4 min-w-[14px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground leading-none">
-                      {unreadCount > 99 ? '99+' : unreadCount}
-                    </span>
-                  )}
-                </div>
+                <Icon className="h-4 w-4" />
                 {item.label}
               </Link>
             );
@@ -65,7 +55,8 @@ function AdminShell({ children }: { children: React.ReactNode }) {
         </nav>
       </aside>
       <div className="flex-1 flex flex-col">
-        <header className="h-14 border-b bg-background flex items-center justify-end px-6 shrink-0">
+        <header className="h-14 border-b bg-background flex items-center justify-end gap-1 px-6 shrink-0">
+          <NotificationBell />
           <ProfileDropdown />
         </header>
         <main className="flex-1 overflow-y-auto bg-background">

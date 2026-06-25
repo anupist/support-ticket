@@ -16,6 +16,23 @@ export function formatDate(date: number | Date): string {
   });
 }
 
+export function formatTime(date: number | Date): string {
+  const d = typeof date === 'number' ? new Date(date) : date;
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+export function formatDateGroup(date: number | Date): string {
+  const d = typeof date === 'number' ? new Date(date) : date;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diffDays = Math.floor((today.getTime() - target.getTime()) / 86400000);
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+}
+
 export function formatDateShort(date: number | Date): string {
   const d = typeof date === 'number' ? new Date(date) : date;
   const now = new Date();

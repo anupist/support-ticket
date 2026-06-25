@@ -11,7 +11,9 @@ export const GET = createHandler(async (req, { user, params }) => {
   });
 
   if (!media) throw new NotFoundError('Media');
-  if (media.userId !== user.uid) throw new ForbiddenError('You do not have access to this file');
+  if (media.userId !== user.uid && user.role !== 'super_admin') {
+    throw new ForbiddenError('You do not have access to this file');
+  }
 
   const filepath = join(process.cwd(), 'private', 'uploads', media.path);
   const buffer = await readFile(filepath);

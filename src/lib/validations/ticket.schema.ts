@@ -16,7 +16,7 @@ export const createTicketSchema = z.object({
 
 export const updateTicketSchema = z.object({
   status: z
-    .enum(['open', 'in_progress', 'waiting_on_client', 'waiting_on_agent', 'resolved', 'closed'])
+    .enum(['open', 'in_progress', 'resolved', 'closed'])
     .optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
   categoryId: z.string().min(1).optional(),

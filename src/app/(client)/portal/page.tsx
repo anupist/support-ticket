@@ -13,7 +13,7 @@ function DashboardContent() {
 
   const openTickets = tickets.filter((t) => t.status === 'open').length;
   const inProgressTickets = tickets.filter(
-    (t) => t.status === 'in_progress' || t.status === 'waiting_on_client'
+    (t) => t.status === 'in_progress'
   ).length;
   const resolvedTickets = tickets.filter((t) => t.status === 'resolved').length;
 

@@ -79,6 +79,15 @@ function mapNotificationRow(row: any) {
   };
 }
 
+export async function createNotificationForStaff(
+  input: Omit<CreateNotificationInput, 'userId'>
+): Promise<void> {
+  await Promise.all([
+    createNotificationForRole('agent', input),
+    createNotificationForRole('super_admin', input),
+  ]);
+}
+
 export async function createNotificationForRole(
   role: Role,
   input: Omit<CreateNotificationInput, 'userId'>

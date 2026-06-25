@@ -6,6 +6,7 @@ export interface TicketMessage extends BaseDocument {
   messageType: MessageType;
   createdBy: string;
   createdByName: string;
+  createdByAvatarUrl?: string;
   createdByRole: string;
   attachments: TicketAttachment[];
   isEdited: boolean;
