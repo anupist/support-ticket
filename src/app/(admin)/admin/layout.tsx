@@ -3,6 +3,7 @@
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { PusherProvider } from '@/providers/PusherProvider';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
+import { ProfileDropdown } from '@/components/ProfileDropdown';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -13,10 +14,7 @@ import {
   FolderTree,
   Bell,
   Settings,
-  LogOut,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Avatar } from '@/components/ui/avatar';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, badge: false },
@@ -28,7 +26,6 @@ const navItems = [
 ];
 
 function AdminShell({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
   const unreadCount = useUnreadCount();
   const pathname = usePathname();
 
@@ -66,28 +63,15 @@ function AdminShell({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
-        <div className="p-4 border-t">
-          <div className="flex items-center gap-3 mb-3">
-            <Avatar
-              fallback={user?.displayName || 'A'}
-              size="sm"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.displayName || 'Admin'}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-            </div>
-          </div>
-          <Button variant="outline" size="sm" className="w-full" asChild>
-            <Link href="/auth/login">
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Link>
-          </Button>
-        </div>
       </aside>
-      <main className="flex-1 overflow-y-auto bg-background">
-        <div className="p-6 max-w-7xl mx-auto">{children}</div>
-      </main>
+      <div className="flex-1 flex flex-col">
+        <header className="h-14 border-b bg-background flex items-center justify-end px-6 shrink-0">
+          <ProfileDropdown />
+        </header>
+        <main className="flex-1 overflow-y-auto bg-background">
+          <div className="p-6 max-w-7xl mx-auto">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

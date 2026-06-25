@@ -8,6 +8,7 @@ interface AuthState {
     displayName: string;
     role: Role;
     tenantId: string;
+    avatarUrl: string;
   } | null;
   isLoading: boolean;
   setUser: (user: AuthState['user']) => void;

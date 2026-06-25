@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createHandler } from '@/lib/api-handler';
+import { prisma } from '@/lib/prisma';
 import { getTicket, updateTicket } from '@/lib/services/ticket.service';
 import { createNotificationForRole } from '@/lib/services/notification.service';
 import { logActivity } from '@/lib/services/activity.service';
+import { sendTicketStatusEmail } from '@/lib/services/mail.service';
 import { updateTicketSchema } from '@/lib/validations/ticket.schema';
 import { canTransitionStatus, canAccessTicket } from '@/lib/permissions';
 import { ValidationError, ForbiddenError } from '@/lib/errors';
+import { DEFAULT_TENANT_ID } from '@/lib/constants';
 import type { Role } from '@/types';
 
 export const GET = createHandler(async (req, { user, params }) => {
@@ -40,6 +43,8 @@ export const PATCH = createHandler(
     const updated = await updateTicket(params.id, parsed.data);
 
     if (parsed.data.status) {
+      const statusLink = `${process.env.NEXT_PUBLIC_APP_URL}/admin/tickets/${ticket.id}`;
+
       await createNotificationForRole('agent', {
         type: 'ticket.status_changed',
         title: `Ticket ${ticket.ticketNumber}: Status changed to ${parsed.data.status}`,
@@ -50,6 +55,11 @@ export const PATCH = createHandler(
         actorName: user.email,
         metadata: { from: ticket.status, to: parsed.data.status },
       });
+
+      const creator = await prisma.user.findUnique({ where: { id: ticket.createdBy } });
+      if (creator) {
+        await sendTicketStatusEmail(creator.email, creator.displayName, ticket.ticketNumber, ticket.status, parsed.data.status, statusLink).catch(() => {});
+      }
 
       await logActivity({
         action: 'ticket.status_changed',

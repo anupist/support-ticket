@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     }
 
     const user = await verifySession(sessionMatch[1]);
-    return NextResponse.json({ uid: user.uid, email: user.email, role: user.role, tenantId: user.tenantId });
+    return NextResponse.json({ uid: user.uid, email: user.email, role: user.role, tenantId: user.tenantId, displayName: user.displayName, avatarUrl: user.avatarUrl });
   } catch (err) {
     return handleApiError(err);
   }

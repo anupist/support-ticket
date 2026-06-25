@@ -159,6 +159,32 @@ model TicketCategory {
   @@map("ticket_categories")
 }
 
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([token])
+  @@index([email])
+  @@map("password_reset_tokens")
+}
+
+model Media {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  originalName String   @map("original_name")
+  mimeType     String   @map("mime_type")
+  size         Int
+  path         String   @unique
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("media")
+}
+
 model TicketNumberCounter {
   id           String @id
   currentValue Int    @default(0) @map("current_value")

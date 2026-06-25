@@ -9,6 +9,7 @@ import { can, canAccessTicket } from '@/lib/permissions';
 import { ValidationError, ForbiddenError } from '@/lib/errors';
 import { DEFAULT_TENANT_ID } from '@/lib/constants';
 import { triggerNotification, triggerNotificationBatch } from '@/lib/pusher-server';
+import { sendTicketMessageEmail } from '@/lib/services/mail.service';
 import type { Role } from '@/types';
 
 export const GET = createHandler(async (req, { user, params }) => {
@@ -144,14 +145,25 @@ export const POST = createHandler(
           tenantId: DEFAULT_TENANT_ID,
           isActive: true,
         },
-        select: { id: true },
+        select: { id: true, email: true, displayName: true },
       });
       const recipientIds = recipientUsers.map((u) => u.id);
       if (recipientIds.length > 0) {
         await triggerNotificationBatch(recipientIds, 'ticket.new-message', messagePayload);
       }
+
+      const messageLink = `${process.env.NEXT_PUBLIC_APP_URL}/${targetRole === 'client' ? 'portal' : 'admin'}/tickets/${params.id}`;
+      for (const r of recipientUsers) {
+        await sendTicketMessageEmail(r.email, r.displayName, ticket.ticketNumber, user.email, parsed.data.body.substring(0, 200), messageLink).catch(() => {});
+      }
     } else if (user.role !== 'client') {
       await triggerNotification(ticket.createdBy, 'ticket.new-message', messagePayload);
+
+      const creator = await prisma.user.findUnique({ where: { id: ticket.createdBy }, select: { email: true, displayName: true } });
+      if (creator) {
+        const clientLink = `${process.env.NEXT_PUBLIC_APP_URL}/portal/tickets/${params.id}`;
+        await sendTicketMessageEmail(creator.email, creator.displayName, ticket.ticketNumber, user.email, parsed.data.body.substring(0, 200), clientLink).catch(() => {});
+      }
     }
 
     await logActivity({

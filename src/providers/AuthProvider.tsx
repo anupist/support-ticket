@@ -8,6 +8,7 @@ interface AuthContextValue {
     uid: string;
     email: string | null;
     displayName: string | null;
+    avatarUrl: string;
   } | null;
   loading: boolean;
   role: string | null;
@@ -41,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             displayName: data.displayName || '',
             role: data.role,
             tenantId: data.tenantId,
+            avatarUrl: data.avatarUrl || '',
           });
         } else {
           clearUserStore();
@@ -69,12 +71,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await res.json();
     setRole(data.user.role);
     setTenantId(data.user.tenantId);
+    const userAvatar = data.user.avatarUrl || data.user.avatarURL || '';
     setUserStore({
       uid: data.user.id,
       email: data.user.email,
       displayName: data.user.displayName,
       role: data.user.role,
       tenantId: data.user.tenantId,
+      avatarUrl: userAvatar,
     });
   }, [setUserStore]);
 
@@ -91,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const data = await res.json();
+    const userAvatar = data.user.avatarUrl || data.user.avatarURL || '';
     setRole(data.user.role);
     setTenantId(data.user.tenantId);
     setUserStore({
@@ -99,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       displayName: data.user.displayName,
       role: data.user.role,
       tenantId: data.user.tenantId,
+      avatarUrl: userAvatar,
     });
   }, [setUserStore]);
 
@@ -113,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user: storeUser
-          ? { uid: storeUser.uid, email: storeUser.email, displayName: storeUser.displayName }
+          ? { uid: storeUser.uid, email: storeUser.email, displayName: storeUser.displayName, avatarUrl: storeUser.avatarUrl }
           : null,
         loading,
         role,

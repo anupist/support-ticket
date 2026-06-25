@@ -6,6 +6,8 @@ export interface AuthenticatedUser {
   email: string;
   role: string;
   tenantId: string;
+  displayName: string;
+  avatarUrl: string;
 }
 
 export async function verifyAuth(request: Request): Promise<AuthenticatedUser> {
@@ -36,5 +38,7 @@ export async function verifySession(sessionToken: string): Promise<Authenticated
     email: session.user.email,
     role: session.user.role,
     tenantId: session.user.tenantId,
+    displayName: session.user.displayName,
+    avatarUrl: session.user.avatarUrl,
   };
 }

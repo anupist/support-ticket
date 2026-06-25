@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api-client';
@@ -14,6 +14,23 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/auth/verify')
+      .then((res) => {
+        if (res.ok) return res.json();
+        throw new Error('Not authenticated');
+      })
+      .then((data) => {
+        if (data.role === 'client') {
+          router.replace('/portal');
+        } else {
+          router.replace('/admin');
+        }
+      })
+      .catch(() => setChecking(false));
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,12 +42,25 @@ export default function LoginPage() {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
-      router.push('/portal');
+      const verify = await apiFetch('/api/auth/verify');
+      if (verify.role === 'client') {
+        router.push('/portal');
+      } else {
+        router.push('/admin');
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
     } finally {
       setLoading(false);
     }
+  }
+
+  if (checking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted/30">
+        <p className="text-muted-foreground">Checking session...</p>
+      </div>
+    );
   }
 
   return (
@@ -72,6 +102,11 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+            </div>
+            <div className="flex justify-end">
+              <Link href="/auth/forgot-password" className="text-xs text-muted-foreground hover:text-primary underline-offset-4 hover:underline">
+                Forgot password?
+              </Link>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign In'}

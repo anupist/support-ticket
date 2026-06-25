@@ -45,6 +45,7 @@ export async function POST(request: Request) {
         displayName: user.displayName,
         role: user.role,
         tenantId: user.tenantId,
+        avatarUrl: user.avatarUrl,
       },
     });
 

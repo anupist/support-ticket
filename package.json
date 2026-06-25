@@ -16,12 +16,14 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
-
     "lucide-react": "^1.21.0",
     "mariadb": "^3.5.3",
     "next": "16.2.9",
+    "nodemailer": "^9.0.1",
     "pg": "^8.22.0",
     "prisma": "^7.8.0",
+    "pusher": "^5.3.4",
+    "pusher-js": "^8.5.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.80.0",
@@ -32,6 +34,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
