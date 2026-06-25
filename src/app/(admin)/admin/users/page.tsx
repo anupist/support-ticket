@@ -26,7 +26,7 @@ function AdminUsersContent() {
   const loadUsers = () => {
     setLoading(true);
     Promise.all([
-      fetch('/api/users').then((r) => r.json()),
+      fetch('/api/users').then((r) => r.json()).catch(() => ({ users: [] })),
       fetch('/api/admin/roles').then((r) => r.json()).catch(() => ({ roles: [] })),
     ]).then(([userData, roleData]) => {
       setUsers(userData.users || []);
