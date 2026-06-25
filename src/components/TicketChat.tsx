@@ -171,7 +171,7 @@ export function TicketChat({ ticketId, backHref }: TicketChatProps) {
         </div>
       </div>
 
-      {(canUpdateStatus || canAssign) && (
+      {isStaff && (
         <div className="grid grid-cols-3 gap-4 mb-4 shrink-0">
           {canUpdateStatus && (
             <Card>
@@ -187,7 +187,7 @@ export function TicketChat({ ticketId, backHref }: TicketChatProps) {
               </CardContent>
             </Card>
           )}
-          {canAssign && (
+          {role === 'super_admin' && (
             <Card>
               <CardHeader><CardTitle className="text-sm">Assignment</CardTitle></CardHeader>
               <CardContent>
@@ -231,7 +231,7 @@ export function TicketChat({ ticketId, backHref }: TicketChatProps) {
               </div>
               <div><span className="text-muted-foreground">Created:</span> {formatDate(ticket.createdAt)}</div>
               <div><span className="text-muted-foreground">Messages:</span> {ticket.messageCount || messages.length}</div>
-              {(role === 'super_admin' || storeUser?.uid === ticket.assignedTo) && ticket.assignedTo && assigneeUser && (
+              {role === 'super_admin' && ticket.assignedTo && assigneeUser && (
                 <div className="pt-2 border-t">
                   <p className="text-xs text-muted-foreground mb-2">Assigned to</p>
                   <div className="flex items-center gap-3">
