@@ -1,29 +1,32 @@
 'use client';
 
 import { useAuthStore } from '@/stores/authStore';
-import { getFirebaseAuth } from '@/lib/firebase-client';
-import { onAuthChange } from '@/lib/auth';
 import { useEffect } from 'react';
 
 export function useFirebaseAuth() {
   const { user, isLoading, setUser, clearUser } = useAuthStore();
 
   useEffect(() => {
-    const unsub = onAuthChange(async (firebaseUser) => {
-      if (firebaseUser) {
-        const tokenResult = await firebaseUser.getIdTokenResult();
-        setUser({
-          uid: firebaseUser.uid,
-          email: firebaseUser.email || '',
-          displayName: firebaseUser.displayName || '',
-          role: (tokenResult.claims.role as any) || 'client',
-          tenantId: (tokenResult.claims.tenantId as string) || 'org_default',
-        });
-      } else {
+    async function checkSession() {
+      try {
+        const res = await fetch('/api/auth/verify');
+        if (res.ok) {
+          const data = await res.json();
+          setUser({
+            uid: data.uid,
+            email: data.email || '',
+            displayName: data.displayName || '',
+            role: data.role || 'client',
+            tenantId: data.tenantId || 'org_default',
+          });
+        } else {
+          clearUser();
+        }
+      } catch {
         clearUser();
       }
-    });
-    return unsub;
+    }
+    checkSession();
   }, [setUser, clearUser]);
 
   return { user, isLoading };

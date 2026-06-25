@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { registerWithEmail } from '@/lib/auth';
+import { apiFetch } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +22,10 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      await registerWithEmail(email, password, name);
+      await apiFetch('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ email, password, displayName: name }),
+      });
       router.push('/portal');
     } catch (err: any) {
       setError(err.message || 'Failed to create account');

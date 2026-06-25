@@ -1,19 +1,20 @@
 import { NextResponse } from 'next/server';
-import { verifySessionCookie } from '@/lib/guards/auth.guard';
+import { verifySession } from '@/lib/guards/auth.guard';
 import { handleApiError } from '@/lib/errors';
 
 export async function GET(request: Request) {
   try {
-    const session = request.headers.get('cookie')?.match(/session=([^;]+)/)?.[1];
+    const cookie = request.headers.get('cookie') || '';
+    const sessionMatch = cookie.match(/session=([^;]+)/);
 
-    if (!session) {
+    if (!sessionMatch) {
       return NextResponse.json(
         { error: { code: 'unauthorized', message: 'No session' } },
         { status: 401 }
       );
     }
 
-    const user = await verifySessionCookie(session);
+    const user = await verifySession(sessionMatch[1]);
     return NextResponse.json({ uid: user.uid, email: user.email, role: user.role, tenantId: user.tenantId });
   } catch (err) {
     return handleApiError(err);

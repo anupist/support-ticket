@@ -1,47 +1,49 @@
 import { prisma } from '@/lib/prisma';
-import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
-import { COLLECTIONS, DEFAULT_TENANT_ID } from '@/lib/constants';
+import { DEFAULT_TENANT_ID } from '@/lib/constants';
+import { hashPassword } from '@/lib/auth';
 import type { User } from '@/types';
-import { NotFoundError } from '@/lib/errors';
-
-const firestore = () => getAdminDb();
+import { NotFoundError, ConflictError } from '@/lib/errors';
 
 interface CreateUserServiceInput {
-  id: string;
   email: string;
+  password: string;
   displayName: string;
   role?: string;
 }
 
 export async function createUser(input: CreateUserServiceInput): Promise<User> {
-  await getAdminAuth().setCustomUserClaims(input.id, {
-    role: input.role || 'client',
-    tenantId: DEFAULT_TENANT_ID,
-  });
+  const existing = await prisma.user.findUnique({ where: { email: input.email } });
+  if (existing) throw new ConflictError('Email already in use');
 
   const user = await prisma.user.create({
     data: {
-      id: input.id,
+      id: crypto.randomUUID(),
       email: input.email,
+      passwordHash: hashPassword(input.password),
       displayName: input.displayName,
       role: input.role || 'client',
       tenantId: DEFAULT_TENANT_ID,
       organizationId: DEFAULT_TENANT_ID,
-      preferences: { notifications: { email: false, push: false } } as any,
-      metadata: { lastLoginAt: null, ticketCount: 0 } as any,
+      preferences: { notifications: { email: false, push: false } },
+      metadata: { lastLoginAt: null, ticketCount: 0 },
     },
   });
 
-  const result = mapUserRow(user);
-
-  await firestore().collection(COLLECTIONS.USERS).doc(user.id).set(result);
-
-  return result;
+  return mapUserRow(user);
 }
 
 export async function getUser(userId: string): Promise<User> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
+  });
+
+  if (!user) throw new NotFoundError('User');
+  return mapUserRow(user);
+}
+
+export async function getUserByEmail(email: string) {
+  const user = await prisma.user.findUnique({
+    where: { email },
   });
 
   if (!user) throw new NotFoundError('User');
@@ -59,20 +61,10 @@ export async function getUsersByTenant(tenantId: string) {
 }
 
 export async function updateUserRole(userId: string, role: string): Promise<void> {
-  await getAdminAuth().setCustomUserClaims(userId, {
-    role,
-    tenantId: DEFAULT_TENANT_ID,
-  });
-
   await prisma.user.update({
     where: { id: userId },
     data: { role },
   });
-
-  await firestore()
-    .collection(COLLECTIONS.USERS)
-    .doc(userId)
-    .update({ role, updatedAt: Date.now() });
 }
 
 function mapUserRow(row: any): User {
@@ -80,7 +72,7 @@ function mapUserRow(row: any): User {
     id: row.id,
     email: row.email,
     displayName: row.displayName,
-    avatarURL: row.avatarURL || '',
+    avatarURL: row.avatarUrl || '',
     role: row.role,
     tenantId: row.tenantId,
     organizationId: row.organizationId,

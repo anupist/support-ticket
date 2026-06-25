@@ -1,9 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { onSnapshot, doc } from 'firebase/firestore';
-import { docRef } from '@/lib/db';
-import { COLLECTIONS } from '@/lib/constants';
 import { apiFetch } from '@/lib/api-client';
 import { useAuthStore } from '@/stores/authStore';
 import type { Ticket } from '@/types';
@@ -12,6 +9,7 @@ interface UseTicketResult {
   ticket: Ticket | null;
   loading: boolean;
   error: string | null;
+  refresh: () => void;
 }
 
 export function useTicket(ticketId: string | null): UseTicketResult {
@@ -19,76 +17,46 @@ export function useTicket(ticketId: string | null): UseTicketResult {
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    if (!ticketId) {
+    if (!ticketId || !authUser) {
       setTicket(null);
       setLoading(false);
       return;
     }
 
-    const id = ticketId;
     let cancelled = false;
 
     async function load() {
       setLoading(true);
       setError(null);
 
-      if (authUser) {
-        try {
-          const data = await apiFetch(`/api/tickets/${id}`);
-          if (!cancelled && data.ticket) {
-            setTicket(data.ticket);
-            setLoading(false);
-          }
-        } catch {
-          // will be handled by Firestore fallback below
+      try {
+        const data = await apiFetch(`/api/tickets/${ticketId}`);
+        if (!cancelled) {
+          setTicket(data.ticket || null);
+          if (!data.ticket) setError('Ticket not found');
         }
+      } catch (err: any) {
+        if (!cancelled) {
+          setError(err.message || 'Failed to load ticket');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      const ref = docRef(COLLECTIONS.TICKETS, id);
-      const unsub = onSnapshot(
-        ref,
-        (snap) => {
-          if (!cancelled) {
-            if (snap.exists()) {
-              setTicket({ id: snap.id, ...snap.data() } as Ticket);
-            }
-            setLoading(false);
-            setError(null);
-          }
-        },
-        () => {
-          if (!cancelled) {
-            apiFetch(`/api/tickets/${id}`)
-              .then((data) => {
-                if (!cancelled) {
-                  setTicket(data.ticket || null);
-                  setLoading(false);
-                  if (!data.ticket) setError('Ticket not found');
-                }
-              })
-              .catch(() => {
-                if (!cancelled) {
-                  setLoading(false);
-                  setError('Ticket not found');
-                }
-              });
-          }
-        }
-      );
-
-      return () => {
-        unsub();
-      };
     }
 
-    const cleanup = load();
+    load();
+
     return () => {
       cancelled = true;
-      cleanup.then((fn) => fn?.());
     };
-  }, [ticketId, authUser]);
+  }, [ticketId, authUser, refreshKey]);
 
-  return { ticket, loading, error };
+  function refresh() {
+    setRefreshKey((k) => k + 1);
+  }
+
+  return { ticket, loading, error, refresh };
 }

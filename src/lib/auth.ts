@@ -1,47 +1,26 @@
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  type User as FirebaseUser,
-} from 'firebase/auth';
-import { getFirebaseAuth } from './firebase-client';
+import { scryptSync, randomUUID, timingSafeEqual } from 'crypto';
 
-function getAuth() {
-  return getFirebaseAuth();
+const SESSION_EXPIRY_MS = 5 * 24 * 60 * 60 * 1000;
+
+export function hashPassword(password: string): string {
+  const salt = randomUUID();
+  const hash = scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
 }
 
-export async function loginWithEmail(email: string, password: string) {
-  const result = await signInWithEmailAndPassword(getAuth(), email, password);
-  const token = await result.user.getIdToken();
-  await fetch('/api/auth/session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken: token }),
-  });
-  return result.user;
+export function verifyPassword(password: string, stored: string): boolean {
+  const [salt, hash] = stored.split(':');
+  const derived = scryptSync(password, salt, 64).toString('hex');
+  if (derived.length !== hash.length) return false;
+  return timingSafeEqual(Buffer.from(derived), Buffer.from(hash));
 }
 
-export async function registerWithEmail(
-  email: string,
-  password: string,
-  displayName: string
-) {
-  const result = await createUserWithEmailAndPassword(getAuth(), email, password);
-  const token = await result.user.getIdToken();
-  await fetch('/api/auth/register', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken: token, displayName }),
-  });
-  return result.user;
+export function generateSessionToken(): string {
+  return randomUUID();
 }
 
-export async function logout() {
-  await signOut(getAuth());
-  await fetch('/api/auth/session', { method: 'DELETE' });
+export function getSessionExpiry(): Date {
+  return new Date(Date.now() + SESSION_EXPIRY_MS);
 }
 
-export function onAuthChange(callback: (user: FirebaseUser | null) => void) {
-  return onAuthStateChanged(getAuth(), callback);
-}
+export { SESSION_EXPIRY_MS };

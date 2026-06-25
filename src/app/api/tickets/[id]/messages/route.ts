@@ -7,11 +7,9 @@ import { logActivity } from '@/lib/services/activity.service';
 import { createMessageSchema } from '@/lib/validations/message.schema';
 import { can, canAccessTicket } from '@/lib/permissions';
 import { ValidationError, ForbiddenError } from '@/lib/errors';
-import { getAdminDb } from '@/lib/firebase-admin';
-import { COLLECTIONS, DEFAULT_TENANT_ID } from '@/lib/constants';
+import { DEFAULT_TENANT_ID } from '@/lib/constants';
+import { triggerNotification, triggerNotificationBatch } from '@/lib/pusher-server';
 import type { Role } from '@/types';
-
-const firestore = () => getAdminDb();
 
 export const GET = createHandler(async (req, { user, params }) => {
   const ticket = await getTicket(params.id);
@@ -75,7 +73,6 @@ export const POST = createHandler(
     }
 
     const now = new Date();
-    const timestamp = Date.now();
 
     const messageData = await prisma.ticketMessage.create({
       data: {
@@ -110,43 +107,23 @@ export const POST = createHandler(
       },
     });
 
-    // Write to Firestore for real-time delivery
-    const rtMessage = {
-      body: messageData.body,
-      messageType: messageData.messageType,
-      createdBy: messageData.createdBy,
-      createdByName: messageData.createdByName,
-      createdByRole: messageData.createdByRole,
-      attachments: messageData.attachments || [],
-      isEdited: messageData.isEdited,
-      editedAt: messageData.editedAt ? new Date(messageData.editedAt).getTime() : null,
-      tenantId: messageData.tenantId,
-      createdAt: timestamp,
-      updatedAt: timestamp,
+    const messagePayload = {
+      ticketId: params.id,
+      message: {
+        id: messageData.id,
+        body: messageData.body,
+        messageType: messageData.messageType,
+        createdBy: messageData.createdBy,
+        createdByName: messageData.createdByName,
+        createdByRole: messageData.createdByRole,
+        attachments: messageData.attachments || [],
+        isEdited: messageData.isEdited,
+        editedAt: messageData.editedAt ? new Date(messageData.editedAt).getTime() : null,
+        tenantId: DEFAULT_TENANT_ID,
+        createdAt: new Date(messageData.createdAt).getTime(),
+        updatedAt: new Date(messageData.updatedAt).getTime(),
+      },
     };
-
-    const messageRef = firestore()
-      .collection(COLLECTIONS.TICKETS)
-      .doc(params.id)
-      .collection(COLLECTIONS.MESSAGES)
-      .doc(messageData.id);
-
-    await messageRef.set(rtMessage);
-
-    // Update ticket in Firestore
-    await firestore()
-      .collection(COLLECTIONS.TICKETS)
-      .doc(params.id)
-      .update({
-        lastActivityAt: timestamp,
-        lastMessageAt: timestamp,
-        lastMessageBy: user.uid,
-        lastMessageByRole: user.role,
-        lastMessagePreview: parsed.data.body.substring(0, 100),
-        messageCount: (ticket.messageCount || 0) + 1,
-        status: status,
-        updatedAt: timestamp,
-      });
 
     if (parsed.data.messageType === 'public') {
       const targetRole = user.role === 'client' ? 'agent' : 'client';
@@ -160,6 +137,21 @@ export const POST = createHandler(
         actorName: user.email,
         metadata: { messageType: parsed.data.messageType },
       });
+
+      const recipientUsers = await prisma.user.findMany({
+        where: {
+          role: targetRole,
+          tenantId: DEFAULT_TENANT_ID,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      const recipientIds = recipientUsers.map((u) => u.id);
+      if (recipientIds.length > 0) {
+        await triggerNotificationBatch(recipientIds, 'ticket.new-message', messagePayload);
+      }
+    } else if (user.role !== 'client') {
+      await triggerNotification(ticket.createdBy, 'ticket.new-message', messagePayload);
     }
 
     await logActivity({
@@ -173,17 +165,17 @@ export const POST = createHandler(
 
     const response = {
       id: messageData.id,
-      body: rtMessage.body,
-      messageType: rtMessage.messageType,
-      createdBy: rtMessage.createdBy,
-      createdByName: rtMessage.createdByName,
-      createdByRole: rtMessage.createdByRole,
-      attachments: rtMessage.attachments,
-      isEdited: rtMessage.isEdited,
-      editedAt: rtMessage.editedAt,
-      tenantId: rtMessage.tenantId,
-      createdAt: rtMessage.createdAt,
-      updatedAt: rtMessage.updatedAt,
+      body: messageData.body,
+      messageType: messageData.messageType,
+      createdBy: messageData.createdBy,
+      createdByName: messageData.createdByName,
+      createdByRole: messageData.createdByRole,
+      attachments: messageData.attachments || [],
+      isEdited: messageData.isEdited,
+      editedAt: messageData.editedAt ? new Date(messageData.editedAt).getTime() : null,
+      tenantId: messageData.tenantId,
+      createdAt: new Date(messageData.createdAt).getTime(),
+      updatedAt: new Date(messageData.updatedAt).getTime(),
     };
 
     return NextResponse.json({ message: response, status }, { status: 201 });

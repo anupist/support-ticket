@@ -23,7 +23,8 @@ model Organization {
 
 model User {
   id             String   @id
-  email          String
+  email          String   @unique
+  passwordHash   String   @map("password_hash")
   displayName    String   @default("") @map("display_name")
   avatarUrl      String   @default("") @map("avatar_url")
   role           String   @default("client")
@@ -35,9 +36,25 @@ model User {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
+  sessions    Session[]
+
   @@index([tenantId])
   @@index([role])
   @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("sessions")
 }
 
 model Ticket {

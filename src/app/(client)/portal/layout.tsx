@@ -1,7 +1,7 @@
 'use client';
 
-import { AuthProvider } from '@/providers/AuthProvider';
-import { useFirebaseAuth } from '@/hooks/useAuth';
+import { AuthProvider, useAuth } from '@/providers/AuthProvider';
+import { PusherProvider } from '@/providers/PusherProvider';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -17,7 +17,7 @@ const navItems = [
 ];
 
 function PortalShell({ children }: { children: React.ReactNode }) {
-  const { user } = useFirebaseAuth();
+  const { user } = useAuth();
   const unreadCount = useUnreadCount();
   const pathname = usePathname();
 
@@ -84,7 +84,9 @@ function PortalShell({ children }: { children: React.ReactNode }) {
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <PortalShell>{children}</PortalShell>
+      <PusherProvider>
+        <PortalShell>{children}</PortalShell>
+      </PusherProvider>
     </AuthProvider>
   );
 }

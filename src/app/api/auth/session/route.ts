@@ -1,20 +1,55 @@
 import { NextResponse } from 'next/server';
-import { getAdminAuth } from '@/lib/firebase-admin';
-import { handleApiError } from '@/lib/errors';
+import { prisma } from '@/lib/prisma';
+import { verifyPassword, generateSessionToken, getSessionExpiry } from '@/lib/auth';
+import { getUserByEmail } from '@/lib/services/user.service';
+import { handleApiError, UnauthorizedError } from '@/lib/errors';
+import { z } from 'zod';
+
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
 
 export async function POST(request: Request) {
   try {
-    const { idToken } = await request.json();
-    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
+    const body = await request.json();
+    const parsed = loginSchema.safeParse(body);
 
-    const sessionCookie = await getAdminAuth().createSessionCookie(idToken, {
-      expiresIn,
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid request', details: parsed.error.errors },
+        { status: 400 }
+      );
+    }
+
+    const { email, password } = parsed.data;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || !verifyPassword(password, user.passwordHash)) {
+      throw new UnauthorizedError('Invalid email or password');
+    }
+
+    const token = generateSessionToken();
+    await prisma.session.create({
+      data: {
+        userId: user.id,
+        token,
+        expiresAt: getSessionExpiry(),
+      },
     });
 
-    const response = NextResponse.json({ success: true });
+    const response = NextResponse.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        role: user.role,
+        tenantId: user.tenantId,
+      },
+    });
 
-    response.cookies.set('session', sessionCookie, {
-      maxAge: expiresIn / 1000,
+    response.cookies.set('session', token, {
+      maxAge: 5 * 24 * 60 * 60,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

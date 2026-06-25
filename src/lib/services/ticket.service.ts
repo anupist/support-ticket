@@ -1,19 +1,26 @@
 import { prisma } from '@/lib/prisma';
-import { getAdminDb } from '@/lib/firebase-admin';
-import { COLLECTIONS, DEFAULT_TENANT_ID } from '@/lib/constants';
+import { DEFAULT_TENANT_ID } from '@/lib/constants';
 import type { Ticket, CreateTicketInput, UpdateTicketInput } from '@/types';
 import { NotFoundError } from '@/lib/errors';
 import { generateTicketNumber } from '@/lib/utils';
 
-const firestore = () => getAdminDb();
-
 export async function getNextTicketNumber(): Promise<string> {
-  const counter = await prisma.ticketNumberCounter.update({
+  let counter = await prisma.ticketNumberCounter.findUnique({
+    where: { id: DEFAULT_TENANT_ID },
+  });
+
+  if (!counter) {
+    counter = await prisma.ticketNumberCounter.create({
+      data: { id: DEFAULT_TENANT_ID, currentValue: 0 },
+    });
+  }
+
+  const updated = await prisma.ticketNumberCounter.update({
     where: { id: DEFAULT_TENANT_ID },
     data: { currentValue: { increment: 1 } },
   });
 
-  return generateTicketNumber(counter.currentValue);
+  return generateTicketNumber(updated.currentValue);
 }
 
 export async function createTicket(
@@ -32,7 +39,7 @@ export async function createTicket(
       status: 'open',
       priority: input.priority,
       categoryId: input.categoryId,
-      tags: (input.tags || []) as any,
+      tags: (input.tags || []),
       createdBy: userId,
       createdByName: userName,
       lastActivityAt: now,
@@ -41,11 +48,7 @@ export async function createTicket(
     },
   });
 
-  const result = mapTicketRow(ticket);
-
-  await firestore().collection(COLLECTIONS.TICKETS).doc(ticket.id).set(result);
-
-  return result;
+  return mapTicketRow(ticket);
 }
 
 export async function getTicket(ticketId: string): Promise<Ticket> {
@@ -69,7 +72,7 @@ export async function updateTicket(
     data.assignedTo = input.assignedTo;
   }
   if (input.categoryId !== undefined) data.categoryId = input.categoryId;
-  if (input.tags !== undefined) data.tags = input.tags as any;
+  if (input.tags !== undefined) data.tags = input.tags;
 
   const ticket = await prisma.ticket.update({
     where: { id: ticketId },
@@ -78,11 +81,7 @@ export async function updateTicket(
 
   if (!ticket) throw new NotFoundError('Ticket');
 
-  const result = mapTicketRow(ticket);
-
-  await firestore().collection(COLLECTIONS.TICKETS).doc(ticketId).update(result as any);
-
-  return result;
+  return mapTicketRow(ticket);
 }
 
 export async function getTicketsByFilter(params: {
@@ -90,6 +89,7 @@ export async function getTicketsByFilter(params: {
   status?: string;
   priority?: string;
   createdBy?: string;
+  assignedTo?: string;
   limitCount?: number;
 }) {
   const where: Record<string, unknown> = {
@@ -99,6 +99,7 @@ export async function getTicketsByFilter(params: {
   if (params.status) where.status = params.status;
   if (params.priority) where.priority = params.priority;
   if (params.createdBy) where.createdBy = params.createdBy;
+  if (params.assignedTo) where.assignedTo = params.assignedTo;
 
   const tickets = await prisma.ticket.findMany({
     where: where as any,

@@ -1,9 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
-import type { User } from 'firebase/auth';
 import { useAuthStore } from '@/stores/authStore';
-import { onAuthChange, loginWithEmail, registerWithEmail, logout as authLogout } from '@/lib/auth';
 
 interface AuthContextValue {
   user: {
@@ -22,54 +20,90 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<string | null>(null);
   const [tenantId, setTenantId] = useState<string | null>(null);
   const setUserStore = useAuthStore((s) => s.setUser);
   const clearUserStore = useAuthStore((s) => s.clearUser);
+  const storeUser = useAuthStore((s) => s.user);
 
   useEffect(() => {
-    const unsub = onAuthChange(async (fbUser) => {
-      setFirebaseUser(fbUser);
-
-      if (fbUser) {
-        const tokenResult = await fbUser.getIdTokenResult();
-        const claimsRole = (tokenResult.claims.role as string) || 'client';
-        const claimsTenant = (tokenResult.claims.tenantId as string) || 'org_default';
-        setRole(claimsRole);
-        setTenantId(claimsTenant);
-
-        setUserStore({
-          uid: fbUser.uid,
-          email: fbUser.email || '',
-          displayName: fbUser.displayName || '',
-          role: claimsRole as any,
-          tenantId: claimsTenant,
-        });
-
-        setLoading(false);
-      } else {
-        setRole(null);
-        setTenantId(null);
+    async function checkSession() {
+      try {
+        const res = await fetch('/api/auth/verify');
+        if (res.ok) {
+          const data = await res.json();
+          setRole(data.role);
+          setTenantId(data.tenantId);
+          setUserStore({
+            uid: data.uid,
+            email: data.email || '',
+            displayName: data.displayName || '',
+            role: data.role,
+            tenantId: data.tenantId,
+          });
+        } else {
+          clearUserStore();
+        }
+      } catch {
         clearUserStore();
+      } finally {
         setLoading(false);
       }
-    });
-    return unsub;
+    }
+    checkSession();
   }, [setUserStore, clearUserStore]);
 
   const login = useCallback(async (email: string, password: string) => {
-    await loginWithEmail(email, password);
-  }, []);
+    const res = await fetch('/api/auth/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error?.message || 'Login failed');
+    }
+
+    const data = await res.json();
+    setRole(data.user.role);
+    setTenantId(data.user.tenantId);
+    setUserStore({
+      uid: data.user.id,
+      email: data.user.email,
+      displayName: data.user.displayName,
+      role: data.user.role,
+      tenantId: data.user.tenantId,
+    });
+  }, [setUserStore]);
 
   const register = useCallback(async (email: string, password: string, name: string) => {
-    await registerWithEmail(email, password, name);
-  }, []);
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, displayName: name }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error?.message || 'Registration failed');
+    }
+
+    const data = await res.json();
+    setRole(data.user.role);
+    setTenantId(data.user.tenantId);
+    setUserStore({
+      uid: data.user.id,
+      email: data.user.email,
+      displayName: data.user.displayName,
+      role: data.user.role,
+      tenantId: data.user.tenantId,
+    });
+  }, [setUserStore]);
 
   const logout = useCallback(async () => {
-    await authLogout();
-    setFirebaseUser(null);
+    await fetch('/api/auth/session', { method: 'DELETE' });
     setRole(null);
     setTenantId(null);
     clearUserStore();
@@ -78,8 +112,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user: firebaseUser
-          ? { uid: firebaseUser.uid, email: firebaseUser.email, displayName: firebaseUser.displayName }
+        user: storeUser
+          ? { uid: storeUser.uid, email: storeUser.email, displayName: storeUser.displayName }
           : null,
         loading,
         role,

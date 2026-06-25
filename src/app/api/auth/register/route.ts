@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getAdminAuth } from '@/lib/firebase-admin';
+import { prisma } from '@/lib/prisma';
 import { createUser } from '@/lib/services/user.service';
-import { handleApiError } from '@/lib/errors';
+import { generateSessionToken, getSessionExpiry } from '@/lib/auth';
+import { handleApiError, ConflictError } from '@/lib/errors';
 import { z } from 'zod';
 
 const registerSchema = z.object({
-  idToken: z.string().min(1, 'Token is required'),
+  email: z.string().email(),
+  password: z.string().min(8),
   displayName: z.string().min(2).max(100),
 });
 
@@ -21,26 +23,22 @@ export async function POST(request: Request) {
       );
     }
 
-    const { idToken, displayName } = parsed.data;
-    const decoded = await getAdminAuth().verifyIdToken(idToken);
+    const { email, password, displayName } = parsed.data;
 
-    const userRecord = await getAdminAuth().getUser(decoded.uid);
+    const user = await createUser({ email, password, displayName, role: 'client' });
 
-    const user = await createUser({
-      id: userRecord.uid,
-      email: userRecord.email || '',
-      displayName,
-      role: 'client',
-    });
-
-    const expiresIn = 60 * 60 * 24 * 5 * 1000;
-    const sessionCookie = await getAdminAuth().createSessionCookie(idToken, {
-      expiresIn,
+    const token = generateSessionToken();
+    await prisma.session.create({
+      data: {
+        userId: user.id,
+        token,
+        expiresAt: getSessionExpiry(),
+      },
     });
 
     const response = NextResponse.json({ user }, { status: 201 });
-    response.cookies.set('session', sessionCookie, {
-      maxAge: expiresIn / 1000,
+    response.cookies.set('session', token, {
+      maxAge: 5 * 24 * 60 * 60,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

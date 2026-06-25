@@ -1,7 +1,7 @@
 'use client';
 
-import { AuthProvider } from '@/providers/AuthProvider';
-import { useFirebaseAuth } from '@/hooks/useAuth';
+import { AuthProvider, useAuth } from '@/providers/AuthProvider';
+import { PusherProvider } from '@/providers/PusherProvider';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -28,7 +28,7 @@ const navItems = [
 ];
 
 function AdminShell({ children }: { children: React.ReactNode }) {
-  const { user } = useFirebaseAuth();
+  const { user } = useAuth();
   const unreadCount = useUnreadCount();
   const pathname = usePathname();
 
@@ -95,7 +95,9 @@ function AdminShell({ children }: { children: React.ReactNode }) {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <AdminShell>{children}</AdminShell>
+      <PusherProvider>
+        <AdminShell>{children}</AdminShell>
+      </PusherProvider>
     </AuthProvider>
   );
 }

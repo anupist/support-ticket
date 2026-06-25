@@ -1,11 +1,9 @@
 import { prisma } from '@/lib/prisma';
-import { getAdminDb } from '@/lib/firebase-admin';
-import { COLLECTIONS, DEFAULT_TENANT_ID } from '@/lib/constants';
+import { DEFAULT_TENANT_ID } from '@/lib/constants';
+import { triggerNotification, triggerNotificationBatch } from '@/lib/pusher-server';
 import type { NotificationType, Role } from '@/types';
 
-const firestore = () => getAdminDb();
-
-interface CreateNotificationInput {
+export interface CreateNotificationInput {
   userId: string;
   type: NotificationType;
   title: string;
@@ -31,31 +29,54 @@ export async function createNotification(
       actorId: input.actorId,
       actorName: input.actorName,
       isRead: false,
-      metadata: (input.metadata || {}) as any,
+      metadata: (input.metadata || {}),
       tenantId: DEFAULT_TENANT_ID,
     },
   });
 
-  const rtDoc = {
-    userId: input.userId,
-    type: input.type,
-    title: input.title,
-    body: input.body,
-    ticketId: input.ticketId,
-    ticketNumber: input.ticketNumber,
-    actorId: input.actorId,
-    actorName: input.actorName,
-    isRead: false,
-    readAt: null,
-    metadata: input.metadata || {},
-    tenantId: DEFAULT_TENANT_ID,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
+  const payload = {
+    notification: {
+      id: notification.id,
+      userId: notification.userId,
+      type: notification.type,
+      title: notification.title,
+      body: notification.body,
+      ticketId: notification.ticketId,
+      ticketNumber: notification.ticketNumber,
+      actorId: notification.actorId,
+      actorName: notification.actorName,
+      isRead: notification.isRead,
+      readAt: notification.readAt ? new Date(notification.readAt).getTime() : null,
+      metadata: notification.metadata,
+      tenantId: notification.tenantId,
+      createdAt: new Date(notification.createdAt).getTime(),
+      updatedAt: new Date(notification.updatedAt).getTime(),
+    },
   };
 
-  await firestore().collection(COLLECTIONS.NOTIFICATIONS).doc(notification.id).set(rtDoc);
+  await triggerNotification(input.userId, 'notification.created', payload);
 
   return notification.id;
+}
+
+function mapNotificationRow(row: any) {
+  return {
+    id: row.id,
+    userId: row.userId,
+    type: row.type,
+    title: row.title,
+    body: row.body,
+    ticketId: row.ticketId,
+    ticketNumber: row.ticketNumber,
+    actorId: row.actorId,
+    actorName: row.actorName,
+    isRead: row.isRead,
+    readAt: row.readAt ? new Date(row.readAt).getTime() : null,
+    metadata: row.metadata,
+    tenantId: row.tenantId,
+    createdAt: new Date(row.createdAt).getTime(),
+    updatedAt: new Date(row.updatedAt).getTime(),
+  };
 }
 
 export async function createNotificationForRole(
@@ -73,8 +94,6 @@ export async function createNotificationForRole(
 
   if (users.length === 0) return;
 
-  const timestamp = Date.now();
-
   const notifications = await Promise.all(
     users.map((user) =>
       prisma.notification.create({
@@ -88,77 +107,46 @@ export async function createNotificationForRole(
           actorId: input.actorId,
           actorName: input.actorName,
           isRead: false,
-          metadata: (input.metadata || {}) as any,
+          metadata: (input.metadata || {}),
           tenantId: DEFAULT_TENANT_ID,
         },
       })
     )
   );
 
-  const batch = firestore().batch();
-  notifications.forEach((n) => {
-    const ref = firestore().collection(COLLECTIONS.NOTIFICATIONS).doc(n.id);
-    batch.set(ref, {
-      userId: n.userId,
-      type: input.type,
-      title: input.title,
-      body: input.body,
-      ticketId: input.ticketId,
-      ticketNumber: input.ticketNumber,
-      actorId: input.actorId,
-      actorName: input.actorName,
-      isRead: false,
-      readAt: null,
-      metadata: input.metadata || {},
-      tenantId: DEFAULT_TENANT_ID,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    });
-  });
-  await batch.commit();
+  const userIds = notifications.map((n) => n.userId);
+  const payloads = notifications.map((n) => ({
+    notification: mapNotificationRow(n),
+  }));
+
+  await triggerNotificationBatch(userIds, 'notification.created', payloads[0]);
 }
 
 export async function markNotificationAsRead(notificationId: string): Promise<void> {
-  const now = new Date();
-  const timestamp = Date.now();
+  const notification = await prisma.notification.findUnique({
+    where: { id: notificationId },
+  });
+
+  if (!notification) return;
 
   await prisma.notification.update({
     where: { id: notificationId },
-    data: { isRead: true, readAt: now },
+    data: { isRead: true, readAt: new Date() },
   });
 
-  await firestore()
-    .collection(COLLECTIONS.NOTIFICATIONS)
-    .doc(notificationId)
-    .update({ isRead: true, readAt: timestamp, updatedAt: timestamp });
+  await triggerNotification(notification.userId, 'notification.marked-read', {
+    notificationId,
+  });
 }
 
 export async function markAllNotificationsAsRead(userId: string): Promise<void> {
-  const now = new Date();
-  const timestamp = Date.now();
-
-  const unread = await prisma.notification.findMany({
+  await prisma.notification.updateMany({
     where: {
       userId,
       isRead: false,
     },
-    select: { id: true },
+    data: { isRead: true, readAt: new Date() },
   });
 
-  if (unread.length > 0) {
-    await prisma.notification.updateMany({
-      where: {
-        userId,
-        isRead: false,
-      },
-      data: { isRead: true, readAt: now },
-    });
-
-    const batch = firestore().batch();
-    unread.forEach((n) => {
-      const ref = firestore().collection(COLLECTIONS.NOTIFICATIONS).doc(n.id);
-      batch.update(ref, { isRead: true, readAt: timestamp, updatedAt: timestamp });
-    });
-    await batch.commit();
-  }
+  await triggerNotification(userId, 'notification.all-read', { userId });
 }

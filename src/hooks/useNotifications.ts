@@ -1,97 +1,44 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import {
-  onSnapshot,
-  query,
-  where,
-  orderBy,
-  limit,
-} from 'firebase/firestore';
-import { collectionRef } from '@/lib/db';
-import { COLLECTIONS, DEFAULT_TENANT_ID } from '@/lib/constants';
+import { useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { useNotificationStore } from '@/stores/notificationStore';
 import { apiFetch } from '@/lib/api-client';
-import type { Notification } from '@/types';
 
-interface UseNotificationsResult {
-  notifications: Notification[];
-  loading: boolean;
-  error: string | null;
-  unreadCount: number;
-}
-
-export function useNotifications(limitCount = 50): UseNotificationsResult {
+export function useNotifications(limitCount = 50) {
   const user = useAuthStore((s) => s.user);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const notifications = useNotificationStore((s) => s.notifications);
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const loading = useNotificationStore((s) => s.loading);
+  const setNotifications = useNotificationStore((s) => s.setNotifications);
+  const refreshKey = useNotificationStore((s) => s.notifications.length);
 
   useEffect(() => {
     if (!user) {
       setNotifications([]);
-      setLoading(false);
       return;
     }
 
-    const u = user;
     let cancelled = false;
 
     async function load() {
-      setLoading(true);
-      setError(null);
-
       try {
         const data = await apiFetch('/api/notifications');
         if (!cancelled) {
           setNotifications(data.notifications || []);
-          setLoading(false);
         }
       } catch {
-        // fall through to Firestore
+        if (!cancelled) setNotifications([]);
       }
-
-      const q = query(
-        collectionRef(COLLECTIONS.NOTIFICATIONS),
-        where('userId', '==', u.uid),
-        where('tenantId', '==', u.tenantId || DEFAULT_TENANT_ID),
-        orderBy('createdAt', 'desc'),
-        limit(limitCount)
-      );
-
-      const unsub = onSnapshot(
-        q,
-        (snapshot) => {
-          if (!cancelled) {
-            const results = snapshot.docs.map(
-              (doc) => ({ id: doc.id, ...doc.data() } as Notification)
-            );
-            setNotifications(results);
-            setLoading(false);
-            setError(null);
-          }
-        },
-        (err) => {
-          if (!cancelled) {
-            setError(err.message);
-            setLoading(false);
-          }
-        }
-      );
-
-      return () => {
-        unsub();
-      };
     }
 
-    const cleanup = load();
+    load();
+
     return () => {
       cancelled = true;
-      cleanup.then((fn) => fn?.());
     };
-  }, [user, limitCount]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
-
-  return { notifications, loading, error, unreadCount };
+  return { notifications, loading, error: null, unreadCount, refresh: () => {} };
 }

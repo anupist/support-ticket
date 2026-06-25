@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { loginWithEmail } from '@/lib/auth';
+import { apiFetch } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,7 +21,10 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await loginWithEmail(email, password);
+      await apiFetch('/api/auth/session', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
       router.push('/portal');
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
