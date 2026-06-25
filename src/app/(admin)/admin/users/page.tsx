@@ -130,7 +130,7 @@ function AdminUsersContent() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Role / Permission Set</label>
-                <select value={formCustomRoleId || formRole} onChange={(e) => {
+                <select value={formCustomRoleId ? `custom:${formCustomRoleId}` : formRole} onChange={(e) => {
                   const val = e.target.value;
                   if (val.startsWith('custom:')) {
                     setFormCustomRoleId(val.replace('custom:', ''));
@@ -142,7 +142,6 @@ function AdminUsersContent() {
                 }} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
                   <optgroup label="Built-in Roles">
                     <option value="client">Client</option>
-                    <option value="agent">Agent</option>
                     <option value="super_admin">Super Admin</option>
                   </optgroup>
                   {customRoles.length > 0 && (
