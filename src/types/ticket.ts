@@ -18,6 +18,7 @@ export interface Ticket extends BaseDocument {
   categoryId: string;
   categoryName?: string;
   tags: string[];
+  attachments?: TicketAttachment[];
   assignedTo: string | null;
   assignedToName: string | null;
   createdBy: string;
@@ -38,6 +39,7 @@ export interface CreateTicketInput {
   priority: TicketPriority;
   categoryId: string;
   tags?: string[];
+  attachmentIds?: string[];
 }
 
 export interface UpdateTicketInput {
@@ -47,3 +49,7 @@ export interface UpdateTicketInput {
   assignedTo?: string | null;
   tags?: string[];
 }
+
+export type PartialTicketUpdate = {
+  [K in keyof Ticket]?: Ticket[K];
+};

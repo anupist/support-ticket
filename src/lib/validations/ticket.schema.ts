@@ -12,6 +12,7 @@ export const createTicketSchema = z.object({
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
   categoryId: z.string().min(1, 'Category is required'),
   tags: z.array(z.string().max(30)).max(10).optional(),
+  attachmentIds: z.array(z.string()).max(5).optional(),
 });
 
 export const updateTicketSchema = z.object({

@@ -93,6 +93,7 @@ model Ticket {
   lastMessageByRole  String?   @map("last_message_by_role")
   lastMessagePreview String?   @map("last_message_preview")
   messageCount       Int       @default(0) @map("message_count")
+  attachments        Json      @default("[]")
   isArchived         Boolean   @default(false) @map("is_archived")
   tenantId           String    @map("tenant_id")
   organizationId     String    @map("organization_id")

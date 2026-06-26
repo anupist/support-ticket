@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PriorityBadge } from '@/components/shared/PriorityBadge';
 import { Avatar } from '@/components/ui/avatar';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Send, Paperclip, FileText, Image, X, Loader2 } from 'lucide-react';
 import { formatTime, formatDate, formatDateGroup } from '@/lib/utils';
 import { Skeleton } from '@/components/shared/LoadingSkeleton';
@@ -27,7 +28,7 @@ interface TicketChatProps {
 export function TicketChat({ ticketId, backHref }: TicketChatProps) {
   const { user } = useAuth();
   const storeUser = useAuthStore((s) => s.user);
-  const { ticket, loading: ticketLoading } = useTicket(ticketId);
+  const { ticket, loading: ticketLoading, refresh: refreshTicket, updateTicket } = useTicket(ticketId);
   const { messages, loading: messagesLoading, sendMessage } = useTicketMessages(ticketId);
   const [newMessage, setNewMessage] = useState('');
   const [messageType, setMessageType] = useState<'public' | 'internal_note'>('public');
@@ -36,6 +37,8 @@ export function TicketChat({ ticketId, backHref }: TicketChatProps) {
   const [pendingFiles, setPendingFiles] = useState<{ id: string; name: string; url: string; mimeType: string }[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [assigning, setAssigning] = useState(false);
+  const [resultDialog, setResultDialog] = useState<{ title: string; message: string; variant?: 'default' | 'destructive' } | null>(null);
+  const [confirmState, setConfirmState] = useState<{ title: string; message: string; variant?: 'default' | 'destructive'; onConfirm: () => void } | null>(null);
   const [creatorUser, setCreatorUser] = useState<any>(null);
   const [assigneeUser, setAssigneeUser] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -114,10 +117,31 @@ export function TicketChat({ ticketId, backHref }: TicketChatProps) {
   }
 
   async function updateStatus(status: TicketStatus) {
-    await fetch(`/api/tickets/${ticketId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
+    setConfirmState({
+      title: 'Change Status',
+      message: `Are you sure you want to change status to "${STATUS_LABELS[status]}"?`,
+      variant: status === 'closed' ? 'destructive' : 'default',
+      onConfirm: async () => {
+        setConfirmState(null);
+        try {
+          const res = await fetch(`/api/tickets/${ticketId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status }),
+          });
+          if (!res.ok) {
+            let msg = 'Failed to update status';
+            try { const e = await res.json(); msg = e.error?.message || e.error || msg; } catch {}
+            throw new Error(msg);
+          }
+          const updated = await res.json();
+          updateTicket(updated.ticket);
+          refreshTicket();
+          setResultDialog({ title: 'Status Changed', message: `Status changed to "${STATUS_LABELS[status]}"`, variant: 'default' });
+        } catch (err: any) {
+          setResultDialog({ title: 'Error', message: err.message || 'Something went wrong', variant: 'destructive' });
+        }
+      },
     });
   }
 
@@ -197,11 +221,24 @@ export function TicketChat({ ticketId, backHref }: TicketChatProps) {
                     const val = e.target.value;
                     if (!val) return;
                     setAssigning(true);
-                    await fetch(`/api/tickets/${ticketId}/assign`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ assignedTo: val }),
-                    });
+                    try {
+                      const assignRes = await fetch(`/api/tickets/${ticketId}/assign`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ assignedTo: val }),
+                      });
+                      if (!assignRes.ok) {
+                        let msg = 'Failed to assign ticket';
+                        try { const e = await assignRes.json(); msg = e.error?.message || e.error || msg; } catch {}
+                        throw new Error(msg);
+                      }
+                      const assignData = await assignRes.json();
+                      updateTicket(assignData.ticket);
+                      refreshTicket();
+                      setResultDialog({ title: 'Assigned', message: `Ticket assigned to ${assignData.ticket.assignedToName || 'agent'}`, variant: 'default' });
+                    } catch (err: any) {
+                      setResultDialog({ title: 'Error', message: err.message || 'Something went wrong', variant: 'destructive' });
+                    }
                     setAssigning(false);
                   }}
                   disabled={assigning}
@@ -253,8 +290,13 @@ export function TicketChat({ ticketId, backHref }: TicketChatProps) {
       )}
 
       <Card className="flex-1 flex flex-col min-h-0 overflow-hidden mb-4">
-        <CardContent className="p-4 border-b shrink-0">
+        <CardContent className="p-4 border-b shrink-0 space-y-3">
           <p className="text-sm whitespace-pre-wrap">{ticket.description}</p>
+          {ticket.attachments && ticket.attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-2 border-t">
+              {ticket.attachments.map((a) => renderAttachment(a))}
+            </div>
+          )}
         </CardContent>
 
         <div className="flex-1 overflow-y-auto px-4 py-2">
@@ -399,6 +441,27 @@ export function TicketChat({ ticketId, backHref }: TicketChatProps) {
           </div>
         )}
       </Card>
+
+      <ConfirmDialog
+        open={!!confirmState}
+        title={confirmState?.title || ''}
+        message={confirmState?.message || ''}
+        variant={confirmState?.variant}
+        confirmLabel="Confirm"
+        cancelLabel="Cancel"
+        onConfirm={() => confirmState?.onConfirm()}
+        onCancel={() => setConfirmState(null)}
+      />
+
+      <ConfirmDialog
+        open={!!resultDialog}
+        title={resultDialog?.title || ''}
+        message={resultDialog?.message || ''}
+        variant={resultDialog?.variant}
+        confirmLabel="OK"
+        alert
+        onConfirm={() => setResultDialog(null)}
+      />
     </div>
   );
 }

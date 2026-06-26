@@ -1,15 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api-client';
 import { useAuthStore } from '@/stores/authStore';
-import type { Ticket } from '@/types';
+import type { Ticket, PartialTicketUpdate } from '@/types';
 
 interface UseTicketResult {
   ticket: Ticket | null;
   loading: boolean;
   error: string | null;
   refresh: () => void;
+  updateTicket: (updates: PartialTicketUpdate) => void;
 }
 
 export function useTicket(ticketId: string | null): UseTicketResult {
@@ -29,7 +30,7 @@ export function useTicket(ticketId: string | null): UseTicketResult {
     let cancelled = false;
 
     async function load() {
-      setLoading(true);
+      if (!ticket) setLoading(true);
       setError(null);
 
       try {
@@ -54,9 +55,13 @@ export function useTicket(ticketId: string | null): UseTicketResult {
     };
   }, [ticketId, authUser, refreshKey]);
 
-  function refresh() {
+  const refresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
-  }
+  }, []);
 
-  return { ticket, loading, error, refresh };
+  const updateTicket = useCallback((updates: PartialTicketUpdate) => {
+    setTicket((prev) => prev ? { ...prev, ...updates } : prev);
+  }, []);
+
+  return { ticket, loading, error, refresh, updateTicket };
 }

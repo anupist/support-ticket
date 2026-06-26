@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { DEFAULT_TENANT_ID } from '@/lib/constants';
-import type { Ticket, CreateTicketInput, UpdateTicketInput } from '@/types';
+import type { Ticket, CreateTicketInput, UpdateTicketInput, TicketAttachment } from '@/types';
 import { NotFoundError } from '@/lib/errors';
 import { generateTicketNumber } from '@/lib/utils';
 
@@ -31,6 +31,8 @@ export async function createTicket(
   const ticketNumber = await getNextTicketNumber();
   const now = new Date();
 
+  const attachmentData = await resolveAttachments(input.attachmentIds);
+
   const ticket = await prisma.ticket.create({
     data: {
       ticketNumber,
@@ -40,6 +42,7 @@ export async function createTicket(
       priority: input.priority,
       categoryId: input.categoryId,
       tags: (input.tags || []),
+      attachments: attachmentData as any,
       createdBy: userId,
       createdByName: userName,
       lastActivityAt: now,
@@ -118,6 +121,21 @@ export async function getTicketsByFilter(params: {
   return tickets.map(mapTicketRow);
 }
 
+async function resolveAttachments(ids?: string[]): Promise<TicketAttachment[]> {
+  if (!ids || ids.length === 0) return [];
+  const media = await prisma.media.findMany({
+    where: { id: { in: ids } },
+  });
+  return media.map((m) => ({
+    id: m.id,
+    fileName: m.originalName,
+    fileSize: m.size,
+    mimeType: m.mimeType,
+    url: `/api/media/${m.id}`,
+    uploadedAt: new Date(m.createdAt).getTime(),
+  }));
+}
+
 function mapTicketRow(row: any): Ticket {
   return {
     id: row.id,
@@ -129,6 +147,7 @@ function mapTicketRow(row: any): Ticket {
     categoryId: row.categoryId,
     categoryName: row.categoryName,
     tags: row.tags || [],
+    attachments: row.attachments || [],
     assignedTo: row.assignedTo,
     assignedToName: row.assignedToName,
     createdBy: row.createdBy,
