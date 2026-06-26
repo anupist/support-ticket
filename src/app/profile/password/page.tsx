@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
-export default function ChangePasswordPage() {
+function ChangePasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isFirstLogin = searchParams.get('firstLogin') === 'true';
@@ -118,5 +118,13 @@ export default function ChangePasswordPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function ChangePasswordPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-muted/30"><div className="max-w-lg mx-auto py-12 px-4"><p className="text-muted-foreground">Loading...</p></div></div>}>
+      <ChangePasswordForm />
+    </Suspense>
   );
 }
