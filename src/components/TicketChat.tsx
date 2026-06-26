@@ -304,33 +304,44 @@ export function TicketChat({ ticketId, backHref }: TicketChatProps) {
                     }
 
                     return (
-                      <div key={msg.id} className={`flex gap-2.5 ${isMine ? 'flex-row-reverse' : ''} ${isSameSender ? 'mt-0.5' : 'mt-3'}`}>
-                        {showAvatar ? (
-                          <Avatar src={msg.createdByAvatarUrl?.startsWith('media:') ? `/api/media/${msg.createdByAvatarUrl.replace('media:', '')}` : msg.createdByAvatarUrl || undefined} fallback={msg.createdByName?.[0] || '?'} size="sm" className="mt-0.5 shrink-0" />
-                        ) : (
-                          <div className="w-8 shrink-0" />
-                        )}
-                        <div className={`max-w-[75%] ${isMine ? 'items-end' : ''}`}>
-                          {!isMine && !isSameSender && (
-                            <p className="text-[11px] font-medium text-primary mb-0.5 ml-1">{msg.createdByName}</p>
-                          )}
-                          <div className={`relative rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap ${
-                            isMine ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-muted rounded-bl-md'
-                          }`}>
-                            {msg.body && <p className="break-words">{msg.body}</p>}
-                            {msg.attachments?.length > 0 && (
-                              <div className="mt-1.5 space-y-1">{msg.attachments.map((a) => renderAttachment(a))}</div>
-                            )}
-                            <div className="flex items-center gap-1 justify-end mt-0.5">
-                              <span className={`text-[10px] ${isMine ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                                {formatTime(msg.createdAt)}
-                              </span>
-                              {isTemp && (
-                                <Loader2 className={`h-3 w-3 animate-spin ${isMine ? 'text-primary-foreground/70' : 'text-muted-foreground'}`} />
+                      <div key={msg.id} className={`flex ${isMine ? 'justify-end' : ''} ${isSameSender ? 'mt-0.5' : 'mt-3'}`}>
+                        {isMine ? (
+                          <div className="max-w-[75%]">
+                            <div className="bg-primary text-primary-foreground rounded-2xl rounded-br-md px-3.5 py-2 text-sm whitespace-pre-wrap">
+                              {msg.body && <p className="break-words">{msg.body}</p>}
+                              {msg.attachments?.length > 0 && (
+                                <div className="mt-1.5 space-y-1">{msg.attachments.map((a) => renderAttachment(a))}</div>
                               )}
+                              <div className="flex items-center gap-1 justify-end mt-0.5">
+                                <span className="text-[10px] text-primary-foreground/70">{formatTime(msg.createdAt)}</span>
+                                {isTemp && <Loader2 className="h-3 w-3 animate-spin text-primary-foreground/70" />}
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        ) : (
+                          <div className="flex gap-2.5 max-w-[75%]">
+                            {showAvatar ? (
+                              <Avatar src={msg.createdByAvatarUrl?.startsWith('media:') ? `/api/media/${msg.createdByAvatarUrl.replace('media:', '')}` : msg.createdByAvatarUrl || undefined} fallback={msg.createdByName?.[0] || '?'} size="sm" className="mt-0.5 shrink-0" />
+                            ) : (
+                              <div className="w-8 shrink-0" />
+                            )}
+                            <div className="min-w-0">
+                              {!isSameSender && (
+                                <p className="text-[11px] font-medium text-primary mb-0.5">{msg.createdByName}</p>
+                              )}
+                              <div className="bg-muted rounded-2xl rounded-bl-md px-3.5 py-2 text-sm whitespace-pre-wrap">
+                                {msg.body && <p className="break-words">{msg.body}</p>}
+                                {msg.attachments?.length > 0 && (
+                                  <div className="mt-1.5 space-y-1">{msg.attachments.map((a) => renderAttachment(a))}</div>
+                                )}
+                                <div className="flex items-center gap-1 justify-end mt-0.5">
+                                  <span className="text-[10px] text-muted-foreground">{formatTime(msg.createdAt)}</span>
+                                  {isTemp && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
