@@ -190,6 +190,9 @@ export function TicketChat({ ticketId, backHref }: TicketChatProps) {
             <span className="text-sm font-mono text-muted-foreground">{ticket.ticketNumber}</span>
             <StatusBadge status={ticket.status} />
             <PriorityBadge priority={ticket.priority} />
+            <span className="text-[11px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">
+              {ticket.projectName || 'General'}
+            </span>
           </div>
           <h1 className="text-xl font-bold">{ticket.subject}</h1>
         </div>
@@ -267,6 +270,7 @@ export function TicketChat({ ticketId, backHref }: TicketChatProps) {
                 </div>
               </div>
               <div><span className="text-muted-foreground">Created:</span> {formatDate(ticket.createdAt)}</div>
+              <div><span className="text-muted-foreground">Project:</span> {ticket.projectName || 'General'}</div>
               <div><span className="text-muted-foreground">Messages:</span> {ticket.messageCount || messages.length}</div>
               {role === 'super_admin' && ticket.assignedTo && assigneeUser && (
                 <div className="pt-2 border-t">

@@ -33,6 +33,12 @@ export async function createTicket(
 
   const attachmentData = await resolveAttachments(input.attachmentIds);
 
+  let projectName: string | null = null;
+  if (input.projectId) {
+    const project = await prisma.project.findUnique({ where: { id: input.projectId } });
+    projectName = project?.name || null;
+  }
+
   const ticket = await prisma.ticket.create({
     data: {
       ticketNumber,
@@ -41,6 +47,8 @@ export async function createTicket(
       status: 'open',
       priority: input.priority,
       categoryId: input.categoryId,
+      projectId: input.projectId || null,
+      projectName,
       tags: (input.tags || []),
       attachments: attachmentData as any,
       createdBy: userId,
@@ -93,6 +101,7 @@ export async function getTicketsByFilter(params: {
   priority?: string;
   createdBy?: string;
   assignedTo?: string;
+  projectId?: string;
   search?: string;
   limitCount?: number;
 }) {
@@ -102,13 +111,16 @@ export async function getTicketsByFilter(params: {
 
   if (params.status) where.status = params.status;
   if (params.priority) where.priority = params.priority;
+  if (params.projectId) {
+    where.projectId = params.projectId === '__none__' ? null : params.projectId;
+  }
   if (params.createdBy) where.createdBy = params.createdBy;
   if (params.assignedTo) where.assignedTo = params.assignedTo;
   if (params.search) {
     where.OR = [
-      { subject: { contains: params.search, mode: 'insensitive' } },
-      { ticketNumber: { contains: params.search, mode: 'insensitive' } },
-      { createdByName: { contains: params.search, mode: 'insensitive' } },
+      { subject: { contains: params.search } },
+      { ticketNumber: { contains: params.search } },
+      { createdByName: { contains: params.search } },
     ];
   }
 
@@ -148,6 +160,8 @@ function mapTicketRow(row: any): Ticket {
     categoryName: row.categoryName,
     tags: row.tags || [],
     attachments: row.attachments || [],
+    projectId: row.projectId || null,
+    projectName: row.projectName || null,
     assignedTo: row.assignedTo,
     assignedToName: row.assignedToName,
     createdBy: row.createdBy,

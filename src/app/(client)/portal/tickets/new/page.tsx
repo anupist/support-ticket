@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, Send, Paperclip, X, Loader2, FileText } from 'lucide-react';
 import { apiFetch } from '@/lib/api-client';
 import Link from 'next/link';
-import type { TicketPriority, TicketAttachment } from '@/types';
+import type { TicketPriority, Project } from '@/types';
 
 const PRIORITIES: { value: TicketPriority; label: string }[] = [
   { value: 'low', label: 'Low' },
@@ -38,8 +38,14 @@ function CreateTicketContent() {
   const [categoryId, setCategoryId] = useState(CATEGORIES[0].id);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectId, setProjectId] = useState('');
   const [pendingFiles, setPendingFiles] = useState<{ file: File; uploading: boolean; id?: string }[]>([]);
   const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    apiFetch('/api/projects').then((d) => setProjects(d.projects || [])).catch(() => {});
+  }, []);
 
   async function handleFilePick(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || []);
@@ -91,7 +97,7 @@ function CreateTicketContent() {
       const attachmentIds = pendingFiles.map((pf) => pf.id).filter(Boolean) as string[];
       const data = await apiFetch('/api/tickets', {
         method: 'POST',
-        body: JSON.stringify({ subject, description, priority, categoryId, attachmentIds }),
+        body: JSON.stringify({ subject, description, priority, categoryId, attachmentIds, projectId: projectId || undefined }),
       });
       router.push(`/portal/tickets/${(data as any).ticket.id}`);
     } catch (err: any) {
@@ -181,6 +187,20 @@ function CreateTicketContent() {
                   ))}
                 </select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Project <span className="text-muted-foreground font-normal">(optional)</span></label>
+              <select
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="">General</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-2">

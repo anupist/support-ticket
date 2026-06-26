@@ -7,11 +7,12 @@ import { NotificationBell } from '@/components/NotificationBell';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Ticket, Home } from 'lucide-react';
+import { Ticket, Home, FolderKanban } from 'lucide-react';
 
 const navItems = [
   { href: '/portal', label: 'Dashboard', icon: Home },
   { href: '/portal/tickets', label: 'My Tickets', icon: Ticket },
+  { href: '/portal/projects', label: 'Projects', icon: FolderKanban },
 ];
 
 function PortalShell({ children }: { children: React.ReactNode }) {

@@ -1,6 +1,7 @@
 export async function apiFetch(url: string, options: RequestInit = {}) {
+  const hasFormData = options.body instanceof FormData;
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(hasFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers as Record<string, string>),
   };
 

@@ -18,7 +18,9 @@ type Action =
   | 'user.list'
   | 'dashboard.view'
   | 'category.manage'
-  | 'settings.view';
+  | 'settings.view'
+  | 'project.manage'
+  | 'project.view';
 
 const PERMISSION_MATRIX: Record<Role, Set<Action>> = {
   client: new Set([
@@ -28,6 +30,8 @@ const PERMISSION_MATRIX: Record<Role, Set<Action>> = {
     'ticket.close',
     'message.create',
     'message.reply_public',
+    'project.manage',
+    'project.view',
   ]),
   agent: new Set([
     'ticket.create',
@@ -42,6 +46,7 @@ const PERMISSION_MATRIX: Record<Role, Set<Action>> = {
     'message.reply_internal',
     'message.view_internal',
     'dashboard.view',
+    'project.view',
   ]),
   super_admin: new Set([
     'ticket.create',
@@ -61,6 +66,8 @@ const PERMISSION_MATRIX: Record<Role, Set<Action>> = {
     'dashboard.view',
     'category.manage',
     'settings.view',
+    'project.manage',
+    'project.view',
   ]),
 };
 

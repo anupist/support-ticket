@@ -19,6 +19,8 @@ export interface Ticket extends BaseDocument {
   categoryName?: string;
   tags: string[];
   attachments?: TicketAttachment[];
+  projectId?: string | null;
+  projectName?: string | null;
   assignedTo: string | null;
   assignedToName: string | null;
   createdBy: string;
@@ -40,6 +42,7 @@ export interface CreateTicketInput {
   categoryId: string;
   tags?: string[];
   attachmentIds?: string[];
+  projectId?: string;
 }
 
 export interface UpdateTicketInput {

@@ -73,6 +73,22 @@ model Session {
   @@map("sessions")
 }
 
+model Project {
+  id             String   @id @default(uuid())
+  name           String
+  description    String?
+  status         String   @default("active")
+  createdBy      String   @map("created_by")
+  tenantId       String   @map("tenant_id")
+  organizationId String   @map("organization_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([createdBy])
+  @@map("projects")
+}
+
 model Ticket {
   id                 String    @id @default(uuid())
   ticketNumber       String    @unique @map("ticket_number")
@@ -82,6 +98,8 @@ model Ticket {
   priority           String    @default("medium")
   categoryId         String?   @map("category_id")
   categoryName       String?   @map("category_name")
+  projectId          String?   @map("project_id")
+  projectName        String?   @map("project_name")
   tags               Json      @default("[]")
   assignedTo         String?   @map("assigned_to")
   assignedToName     String?   @map("assigned_to_name")

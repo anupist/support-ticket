@@ -14,12 +14,14 @@ export const GET = createHandler(async (req, { user }) => {
   const status = searchParams.get('status');
   const priority = searchParams.get('priority');
   const search = searchParams.get('search');
+  const projectId = searchParams.get('projectId');
 
   const tickets = await getTicketsByFilter({
     tenantId: user.tenantId,
     status: status || undefined,
     priority: priority || undefined,
     search: search || undefined,
+    projectId: projectId || undefined,
     createdBy: user.role === 'client' ? user.uid : undefined,
     assignedTo: user.role === 'agent' ? user.uid : undefined,
   });

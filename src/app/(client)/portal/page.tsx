@@ -2,10 +2,12 @@
 
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { useTickets } from '@/hooks/useTickets';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Ticket, Clock, CheckCircle, XCircle, TrendingUp, PieChart as PieChartIcon } from 'lucide-react';
+import { Ticket, Clock, CheckCircle, XCircle, TrendingUp, PieChart as PieChartIcon, FolderKanban, BarChart3 } from 'lucide-react';
 import { TicketTrendChart } from '@/components/charts/TicketTrendChart';
 import { StatusDonutChart } from '@/components/charts/StatusDonutChart';
+import { ProjectTicketChart } from '@/components/charts/ProjectTicketChart';
 
 function StatCard({ title, value, icon: Icon, color }: { title: string; value: string | number; icon: any; color: string }) {
   return (
@@ -38,6 +40,15 @@ function ChartCard({ title, icon: Icon, children }: { title: string; icon: any; 
 function DashboardContent() {
   const { user } = useAuth();
   const { tickets, loading } = useTickets();
+  const [projectCount, setProjectCount] = useState<number>(0);
+  const [projectsLoading, setProjectsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/projects')
+      .then((r) => r.json())
+      .then((d) => { setProjectCount(d.projects?.length || 0); setProjectsLoading(false); })
+      .catch(() => setProjectsLoading(false));
+  }, []);
 
   const totalTickets = tickets.length;
   const openTickets = tickets.filter((t) => t.status === 'open').length;
@@ -53,15 +64,16 @@ function DashboardContent() {
         <h1 className="text-2xl font-bold text-foreground">
           Welcome{user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}
         </h1>
-        <p className="text-muted-foreground">View your support tickets</p>
+        <p className="text-muted-foreground">View your support tickets and projects</p>
       </div>
 
-      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-6">
         <StatCard title="Total Tickets" value={dash(totalTickets)} icon={Ticket} color="text-muted-foreground" />
         <StatCard title="Open" value={dash(openTickets)} icon={Ticket} color="text-amber-500" />
         <StatCard title="In Progress" value={dash(inProgressTickets)} icon={Clock} color="text-blue-500" />
         <StatCard title="Resolved" value={dash(resolvedTickets)} icon={CheckCircle} color="text-green-500" />
         <StatCard title="Closed" value={dash(closedTickets)} icon={XCircle} color="text-gray-500" />
+        <StatCard title="Total Projects" value={projectsLoading ? '-' : projectCount} icon={FolderKanban} color="text-violet-500" />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -72,6 +84,10 @@ function DashboardContent() {
           <StatusDonutChart />
         </ChartCard>
       </div>
+
+      <ChartCard title="Project-wise Tickets" icon={BarChart3}>
+        <ProjectTicketChart />
+      </ChartCard>
     </div>
   );
 }

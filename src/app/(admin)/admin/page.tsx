@@ -8,6 +8,7 @@ import { Ticket, Clock, CheckCircle, XCircle, Users, Activity, TrendingUp, PieCh
 import { TicketTrendChart } from '@/components/charts/TicketTrendChart';
 import { StatusDonutChart } from '@/components/charts/StatusDonutChart';
 import { PriorityBarChart } from '@/components/charts/PriorityBarChart';
+import { ProjectTicketChart } from '@/components/charts/ProjectTicketChart';
 import Link from 'next/link';
 
 function StatCard({ title, value, icon: Icon, color }: { title: string; value: string | number; icon: any; color: string }) {
@@ -81,6 +82,9 @@ function AdminDashboard() {
             <PriorityBarChart />
           </ChartCard>
         </div>
+        <ChartCard title="Project-wise Tickets" icon={BarChart3}>
+          <ProjectTicketChart />
+        </ChartCard>
       </div>
 
       {isSuperAdmin && (
