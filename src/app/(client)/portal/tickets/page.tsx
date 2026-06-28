@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { AuthProvider } from '@/providers/AuthProvider';
@@ -166,7 +166,9 @@ function TicketListContent() {
 export default function TicketsPage() {
   return (
     <AuthProvider>
-      <TicketListContent />
+      <Suspense fallback={<TicketListSkeleton />}>
+        <TicketListContent />
+      </Suspense>
     </AuthProvider>
   );
 }
