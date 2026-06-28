@@ -4,6 +4,7 @@ import { PrismaClient } from "../../generated/prisma/client";
 const adapter = new PrismaMariaDb({
   host: process.env.DATABASE_HOST || "localhost",
   user: process.env.DATABASE_USER || "root",
+  password: process.env.DATABASE_PASSWORD || "",
   database: process.env.DATABASE_NAME || "support_portal",
   connectionLimit: 5,
 });
