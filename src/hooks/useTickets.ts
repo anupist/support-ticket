@@ -33,8 +33,11 @@ export function useTickets(options: UseTicketsOptions = {}): UseTicketsResult {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const loadTickets = useCallback(
-    async (pageNum: number, append: boolean) => {
+  // Reset on filter change
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
       if (!user) {
         setTickets([]);
         setLoading(false);
@@ -48,38 +51,58 @@ export function useTickets(options: UseTicketsOptions = {}): UseTicketsResult {
       if (status !== 'all') params.set('status', status);
       if (search) params.set('search', search);
       if (projectId) params.set('projectId', projectId);
-      params.set('page', String(pageNum));
+
+      try {
+        const data = await apiFetch(`/api/tickets?${params.toString()}&page=1&limit=${pageSize}`);
+        if (!cancelled) {
+          setTickets(data.tickets || []);
+          setTotalCount(data.totalCount || 0);
+        }
+      } catch (err: any) {
+        if (!cancelled) {
+          setError(err.message || 'Failed to load tickets');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    setPage(1);
+    setTickets([]);
+    load();
+
+    return () => { cancelled = true; };
+  }, [user, status, search, projectId, pageSize, refreshKey]);
+
+  const loadMore = useCallback(() => {
+    async function fetchMore() {
+      if (!user || loading) return;
+
+      setLoading(true);
+      setError(null);
+
+      const nextPage = page + 1;
+      const params = new URLSearchParams();
+      if (status !== 'all') params.set('status', status);
+      if (search) params.set('search', search);
+      if (projectId) params.set('projectId', projectId);
+      params.set('page', String(nextPage));
       params.set('limit', String(pageSize));
 
       try {
         const data = await apiFetch(`/api/tickets?${params.toString()}`);
-        if (append) {
-          setTickets((prev) => [...prev, ...(data.tickets || [])]);
-        } else {
-          setTickets(data.tickets || []);
-        }
+        setTickets((prev) => [...prev, ...(data.tickets || [])]);
         setTotalCount(data.totalCount || 0);
+        setPage(nextPage);
       } catch (err: any) {
         setError(err.message || 'Failed to load tickets');
       } finally {
         setLoading(false);
       }
-    },
-    [user, status, search, projectId, pageSize]
-  );
+    }
 
-  // Reset on filter change
-  useEffect(() => {
-    setPage(1);
-    setTickets([]);
-    loadTickets(1, false);
-  }, [user, status, search, projectId, pageSize, refreshKey]);
-
-  const loadMore = useCallback(() => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    loadTickets(nextPage, true);
-  }, [page, loadTickets]);
+    fetchMore();
+  }, [user, loading, page, status, search, projectId, pageSize]);
 
   const refresh = useCallback(() => {
     setRefreshKey((k) => k + 1);

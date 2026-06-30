@@ -1,5 +1,9 @@
 # support-ticket · agent guide
 
+## Critical Rules
+
+- **NEVER break existing features.** Before changing or adding any feature, verify all previously working features still work. Every existing fix, filter, pagination, UI behavior must be preserved. Do not let anything go to waste.
+
 ## Stack
 
 - **Next.js 16** (App Router, Turbopack for dev)
