@@ -12,6 +12,29 @@ export async function middleware(request: NextRequest) {
 
   const session = request.cookies.get('session')?.value;
 
+  // Root path — landing page: show to everyone, but redirect authenticated users away
+  if (pathname === '/') {
+    if (session) {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/verify`,
+          {
+            headers: { Cookie: `session=${session}` },
+          }
+        );
+
+        if (response.ok) {
+          const { role } = await response.json();
+          const dest = role === 'client' ? '/portal' : '/admin';
+          return NextResponse.redirect(new URL(dest, request.url));
+        }
+      } catch {
+        // Fall through — show landing page
+      }
+    }
+    return NextResponse.next();
+  }
+
   if (publicPaths.some((p) => pathname.startsWith(p))) {
     if (session) {
       try {
@@ -35,7 +58,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!session) {
-    if (pathname === '/' || pathname.startsWith('/admin') || pathname.startsWith('/portal')) {
+    if (pathname.startsWith('/admin') || pathname.startsWith('/portal')) {
       return NextResponse.redirect(new URL('/auth/login', request.url));
     }
     return NextResponse.next();
@@ -56,11 +79,6 @@ export async function middleware(request: NextRequest) {
     }
 
     const { role } = await response.json();
-
-    if (pathname === '/') {
-      const dest = role === 'client' ? '/portal' : '/admin';
-      return NextResponse.redirect(new URL(dest, request.url));
-    }
 
     if (pathname.startsWith('/admin') && !['agent', 'super_admin'].includes(role)) {
       return NextResponse.redirect(new URL('/portal', request.url));
