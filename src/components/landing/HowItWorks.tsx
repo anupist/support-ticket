@@ -33,14 +33,14 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-20 md:py-28 bg-[#F5F5F5]">
+    <section id="how-it-works" className="py-20 md:py-28 bg-muted">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <SectionWrapper>
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#111111]">
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
               How It Works
             </h2>
-            <p className="mt-4 text-lg text-[#4A4A4A]">
+            <p className="mt-4 text-lg text-muted-foreground">
               From ticket creation to resolution — four simple steps.
             </p>
           </div>
@@ -51,24 +51,24 @@ export default function HowItWorks() {
             <SectionWrapper key={step.title}>
               <div className="flex items-start gap-6">
                 <div className="flex flex-col items-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#ED1C24] text-white shadow-sm">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
                     <step.icon className="h-5 w-5" />
                   </div>
                   {index < steps.length - 1 && (
                     <div className="mt-2 flex-1 flex items-center justify-center">
-                      <ArrowDown className="h-5 w-5 text-[#4A4A4A]/40" />
+                      <ArrowDown className="h-5 w-5 text-muted-foreground/40" />
                     </div>
                   )}
                 </div>
                 <div className="flex-1 pb-12">
-                  <div className="rounded-2xl border border-[#E5E5E5] bg-white p-6 transition-all duration-200 hover:shadow-md">
+                  <div className="rounded-2xl border bg-card text-card-foreground p-6 transition-all duration-200 hover:shadow-md">
                     <div className="flex items-center gap-3 mb-2">
-                      <span className="inline-flex items-center justify-center rounded-full bg-[#ED1C24]/5 px-2.5 py-0.5 text-xs font-semibold text-[#ED1C24]">
+                      <span className="inline-flex items-center justify-center rounded-full bg-primary/5 px-2.5 py-0.5 text-xs font-semibold text-primary">
                         Step {index + 1}
                       </span>
                     </div>
-                    <h3 className="text-lg font-semibold text-[#111111]">{step.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-[#4A4A4A]">
+                    <h3 className="text-lg font-semibold">{step.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                       {step.description}
                     </p>
                   </div>

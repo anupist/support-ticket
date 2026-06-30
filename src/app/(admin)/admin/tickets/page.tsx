@@ -11,19 +11,21 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PriorityBadge } from '@/components/shared/PriorityBadge';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { TicketListSkeleton } from '@/components/shared/LoadingSkeleton';
-import { Ticket, Search, X, FolderKanban } from 'lucide-react';
+import { Ticket, Search, X, FolderKanban, ChevronDown } from 'lucide-react';
 import { RelativeTime } from '@/components/relative-time';
 import { formatDate } from '@/lib/utils';
 import { apiFetch } from '@/lib/api-client';
 import type { TicketStatus, Project } from '@/types';
 
 const STATUS_FILTERS = ['all', 'open', 'in_progress', 'resolved', 'closed'] as const;
+const PAGE_SIZES = [10, 20, 50];
 
 function AdminTicketsContent() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [projectFilter, setProjectFilter] = useState('');
+  const [pageSize, setPageSize] = useState(10);
   const [projects, setProjects] = useState<Project[]>([]);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -31,10 +33,11 @@ function AdminTicketsContent() {
     apiFetch('/api/projects').then((d) => setProjects(d.projects || [])).catch(() => {});
   }, []);
 
-  const { tickets, loading } = useTickets({
+  const { tickets, loading, loadMore, hasMore, totalCount } = useTickets({
     status: statusFilter as TicketStatus | 'all',
     search: debouncedSearch,
     projectId: projectFilter || undefined,
+    pageSize,
   });
 
   const handleSearch = useCallback((value: string) => {
@@ -52,7 +55,7 @@ function AdminTicketsContent() {
         <p className="text-muted-foreground">Manage and respond to support tickets</p>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex gap-1 overflow-x-auto">
           {STATUS_FILTERS.map((status) => (
             <Button
@@ -79,7 +82,7 @@ function AdminTicketsContent() {
             ))}
           </select>
         </div>
-        <div className="relative flex-1 max-w-sm ml-auto">
+        <div className="relative flex-1 max-w-sm sm:ml-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search tickets..."
@@ -98,7 +101,7 @@ function AdminTicketsContent() {
         </div>
       </div>
 
-      {loading ? (
+      {loading && tickets.length === 0 ? (
         <TicketListSkeleton />
       ) : tickets.length === 0 ? (
         <EmptyState
@@ -107,14 +110,29 @@ function AdminTicketsContent() {
           description={searchQuery ? `No tickets matching "${searchQuery}"` : projectFilter ? 'No tickets for this project.' : statusFilter !== 'all' ? `No tickets with status "${statusFilter}"` : 'No tickets have been created yet.'}
         />
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <span>Showing {tickets.length} of {totalCount} tickets</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs">Show:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                className="flex h-7 rounded-md border border-input bg-transparent px-2 text-xs"
+              >
+                {PAGE_SIZES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          </div>
           {tickets.map((ticket) => (
-            <Link key={ticket.id} href={`/admin/tickets/${ticket.id}`}>
+            <Link key={ticket.id} href={`/admin/tickets/${ticket.id}`} className="block">
               <Card className="transition-colors hover:bg-muted/50 cursor-pointer">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="text-xs font-mono text-muted-foreground">{ticket.ticketNumber}</span>
                         <StatusBadge status={ticket.status} />
                         <PriorityBadge priority={ticket.priority} />
@@ -136,7 +154,7 @@ function AdminTicketsContent() {
                         Created {formatDate(ticket.createdAt)}
                       </p>
                     </div>
-                    <div className="text-xs text-muted-foreground whitespace-nowrap ml-4">
+                    <div className="text-xs text-muted-foreground whitespace-nowrap ml-4 shrink-0">
                       <RelativeTime date={ticket.lastActivityAt || ticket.createdAt} />
                     </div>
                   </div>
@@ -144,6 +162,14 @@ function AdminTicketsContent() {
               </Card>
             </Link>
           ))}
+          {hasMore && (
+            <div className="flex justify-center pt-2">
+              <Button variant="outline" onClick={loadMore} disabled={loading}>
+                {loading ? 'Loading...' : 'Load More'}
+                <ChevronDown className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

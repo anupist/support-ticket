@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Mail, CheckCircle } from 'lucide-react';
+import AuthLayout from '@/components/landing/AuthLayout';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -39,16 +40,16 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
+    <AuthLayout>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Forgot Password</CardTitle>
-          <CardDescription>Enter your email and we'll send you a reset link</CardDescription>
+          <CardDescription>Enter your email and we&apos;ll send you a reset link</CardDescription>
         </CardHeader>
         <CardContent>
           {sent ? (
             <div className="text-center space-y-4">
-              <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
+              <CheckCircle className="h-12 w-12 text-success mx-auto" />
               <p className="text-sm text-muted-foreground">If an account with that email exists, a password reset link has been sent.</p>
               <Button variant="outline" asChild className="mt-4">
                 <Link href="/auth/login">Back to Login</Link>
@@ -76,6 +77,6 @@ export default function ForgotPasswordPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </AuthLayout>
   );
 }

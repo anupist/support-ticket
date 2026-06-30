@@ -8,10 +8,10 @@ export default function About() {
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <SectionWrapper>
           <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#111111]">
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
               About Coder71 Support
             </h2>
-            <div className="mt-8 space-y-5 text-lg leading-relaxed text-[#4A4A4A]">
+            <div className="mt-8 space-y-5 text-lg leading-relaxed text-muted-foreground">
               <p>
                 Coder71 Support helps businesses manage customer support requests efficiently through a
                 centralized ticket management system.

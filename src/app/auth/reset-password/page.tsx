@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
+import AuthLayout from '@/components/landing/AuthLayout';
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -23,7 +24,7 @@ function ResetPasswordForm() {
 
   if (!token) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
+      <AuthLayout>
         <Card className="w-full max-w-md">
           <CardContent className="pt-6 text-center space-y-4">
             <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
@@ -31,7 +32,7 @@ function ResetPasswordForm() {
             <Button asChild><Link href="/auth/forgot-password">Request Reset</Link></Button>
           </CardContent>
         </Card>
-      </div>
+      </AuthLayout>
     );
   }
 
@@ -78,7 +79,7 @@ function ResetPasswordForm() {
 
   if (invalidToken) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
+      <AuthLayout>
         <Card className="w-full max-w-md">
           <CardContent className="pt-6 text-center space-y-4">
             <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
@@ -86,12 +87,12 @@ function ResetPasswordForm() {
             <Button asChild><Link href="/auth/forgot-password">Request New Reset</Link></Button>
           </CardContent>
         </Card>
-      </div>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
+    <AuthLayout>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Reset Password</CardTitle>
@@ -100,7 +101,7 @@ function ResetPasswordForm() {
         <CardContent>
           {success ? (
             <div className="text-center space-y-4">
-              <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
+              <CheckCircle className="h-12 w-12 text-success mx-auto" />
               <p className="text-sm text-muted-foreground">Password reset successfully! Redirecting to login...</p>
             </div>
           ) : (
@@ -126,13 +127,13 @@ function ResetPasswordForm() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </AuthLayout>
   );
 }
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-muted/30"><p className="text-muted-foreground">Loading...</p></div>}>
+    <Suspense fallback={<AuthLayout><div className="text-center text-muted-foreground">Loading...</div></AuthLayout>}>
       <ResetPasswordForm />
     </Suspense>
   );

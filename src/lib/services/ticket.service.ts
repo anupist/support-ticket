@@ -103,7 +103,9 @@ export async function getTicketsByFilter(params: {
   assignedTo?: string;
   projectId?: string;
   search?: string;
-  limitCount?: number;
+  page?: number;
+  pageSize?: number;
+  createdByOrAssignedTo?: string;
 }) {
   const where: Record<string, unknown> = {
     tenantId: params.tenantId,
@@ -114,23 +116,53 @@ export async function getTicketsByFilter(params: {
   if (params.projectId) {
     where.projectId = params.projectId === '__none__' ? null : params.projectId;
   }
-  if (params.createdBy) where.createdBy = params.createdBy;
-  if (params.assignedTo) where.assignedTo = params.assignedTo;
-  if (params.search) {
+
+  // Agent: see tickets where createdBy OR assignedTo matches
+  if (params.createdByOrAssignedTo) {
     where.OR = [
-      { subject: { contains: params.search } },
-      { ticketNumber: { contains: params.search } },
-      { createdByName: { contains: params.search } },
+      { createdBy: params.createdByOrAssignedTo },
+      { assignedTo: params.createdByOrAssignedTo },
     ];
+    if (params.search) {
+      where.AND = [
+        { OR: where.OR as any },
+        {
+          OR: [
+            { subject: { contains: params.search } },
+            { ticketNumber: { contains: params.search } },
+            { createdByName: { contains: params.search } },
+          ],
+        },
+      ];
+      delete where.OR;
+    }
+  } else {
+    if (params.createdBy) where.createdBy = params.createdBy;
+    if (params.assignedTo) where.assignedTo = params.assignedTo;
+    if (params.search) {
+      where.OR = [
+        { subject: { contains: params.search } },
+        { ticketNumber: { contains: params.search } },
+        { createdByName: { contains: params.search } },
+      ];
+    }
   }
 
-  const tickets = await prisma.ticket.findMany({
-    where: where as any,
-    orderBy: { lastActivityAt: 'desc' },
-    take: params.limitCount || 50,
-  });
+  const page = params.page || 1;
+  const pageSize = params.pageSize || 10;
+  const skip = (page - 1) * pageSize;
 
-  return tickets.map(mapTicketRow);
+  const [tickets, totalCount] = await Promise.all([
+    prisma.ticket.findMany({
+      where: where as any,
+      orderBy: { lastActivityAt: 'desc' },
+      skip,
+      take: pageSize,
+    }),
+    prisma.ticket.count({ where: where as any }),
+  ]);
+
+  return { tickets: tickets.map(mapTicketRow), totalCount };
 }
 
 async function resolveAttachments(ids?: string[]): Promise<TicketAttachment[]> {

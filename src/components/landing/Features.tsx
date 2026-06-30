@@ -55,24 +55,24 @@ export default function Features() {
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <SectionWrapper>
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#111111]">
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
               Everything you need to manage support
             </h2>
-            <p className="mt-4 text-lg text-[#4A4A4A]">
+            <p className="mt-4 text-lg text-muted-foreground">
               A complete set of tools to handle customer requests from submission to resolution.
             </p>
           </div>
         </SectionWrapper>
 
         <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, index) => (
+          {features.map((feature) => (
             <SectionWrapper key={feature.title}>
-              <div className="group rounded-2xl border border-[#E5E5E5] bg-white p-8 transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
-                <div className="inline-flex items-center justify-center rounded-xl bg-[#ED1C24]/5 p-3">
-                  <feature.icon className="h-6 w-6 text-[#ED1C24]" />
+              <div className="group rounded-2xl border bg-card text-card-foreground p-8 transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+                <div className="inline-flex items-center justify-center rounded-xl bg-primary/5 p-3">
+                  <feature.icon className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="mt-5 text-lg font-semibold text-[#111111]">{feature.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[#4A4A4A]">
+                <h3 className="mt-5 text-lg font-semibold">{feature.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {feature.description}
                 </p>
               </div>

@@ -15,18 +15,22 @@ export const GET = createHandler(async (req, { user }) => {
   const priority = searchParams.get('priority');
   const search = searchParams.get('search');
   const projectId = searchParams.get('projectId');
+  const page = parseInt(searchParams.get('page') || '1', 10);
+  const pageSize = parseInt(searchParams.get('limit') || '10', 10);
 
-  const tickets = await getTicketsByFilter({
+  const { tickets, totalCount } = await getTicketsByFilter({
     tenantId: user.tenantId,
     status: status || undefined,
     priority: priority || undefined,
     search: search || undefined,
     projectId: projectId || undefined,
     createdBy: user.role === 'client' ? user.uid : undefined,
-    assignedTo: user.role === 'agent' ? user.uid : undefined,
+    createdByOrAssignedTo: user.role === 'agent' ? user.uid : undefined,
+    page,
+    pageSize,
   });
 
-  return NextResponse.json({ tickets });
+  return NextResponse.json({ tickets, totalCount, page, pageSize });
 });
 
 export const POST = createHandler(

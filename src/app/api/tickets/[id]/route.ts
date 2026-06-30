@@ -36,6 +36,20 @@ export const PATCH = createHandler(
 
     const ticket = await getTicket(params.id);
 
+    if (!canAccessTicket(user.role as Role, user.uid, ticket.createdBy, ticket.assignedTo)) {
+      throw new ForbiddenError('You do not have access to this ticket');
+    }
+
+    // Clients can only close their own tickets
+    if (user.role === 'client') {
+      if (parsed.data.status !== 'closed') {
+        throw new ForbiddenError('Clients can only close tickets');
+      }
+      if (ticket.createdBy !== user.uid) {
+        throw new ForbiddenError('You can only close your own tickets');
+      }
+    }
+
     if (parsed.data.status && !canTransitionStatus(user.role as Role, ticket.status, parsed.data.status)) {
       throw new ForbiddenError('Cannot transition to this status');
     }
@@ -72,6 +86,5 @@ export const PATCH = createHandler(
     }
 
     return NextResponse.json({ ticket: updated });
-  },
-  { permissions: ['ticket.update_status'] }
+  }
 );

@@ -28,23 +28,25 @@ export function StatusDonutChart() {
   const total = data.reduce((sum: number, item: any) => sum + item.value, 0);
 
   return (
-    <div className="flex items-center gap-4">
-      <ResponsiveContainer width="55%" height={200}>
-        <PieChart>
-          <Pie data={data} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={3} dataKey="value" nameKey="name">
-            {data.map((entry: any) => (
-              <Cell key={entry.name} fill={STATUS_CONFIG[entry.name]?.color || '#94a3b8'} />
-            ))}
-          </Pie>
-        </PieChart>
-      </ResponsiveContainer>
-      <div className="space-y-2 text-sm">
+    <div className="flex flex-col md:flex-row items-center gap-4">
+      <div className="w-full md:w-[55%]">
+        <ResponsiveContainer width="100%" height={200}>
+          <PieChart>
+            <Pie data={data} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={3} dataKey="value" nameKey="name">
+              {data.map((entry: any) => (
+                <Cell key={entry.name} fill={STATUS_CONFIG[entry.name]?.color || '#94a3b8'} />
+              ))}
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="flex flex-row md:flex-col gap-3 md:gap-2 flex-wrap justify-center md:justify-start text-sm">
         {data.map((entry: any) => {
           const cfg = STATUS_CONFIG[entry.name];
           return (
             <div key={entry.name} className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: cfg?.color || '#94a3b8' }} />
-              <span className="text-muted-foreground min-w-[80px]">{cfg?.label || entry.name}</span>
+              <span className="text-muted-foreground min-w-[60px] md:min-w-[80px]">{cfg?.label || entry.name}</span>
               <span className="font-medium tabular-nums">{entry.value}</span>
               <span className="text-xs text-muted-foreground tabular-nums">({Math.round((entry.value / total) * 100)}%)</span>
             </div>

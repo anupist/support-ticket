@@ -92,9 +92,9 @@ function AdminUsersContent() {
       ) : (
         <Card>
           <CardContent className="p-0">
-            <div className="divide-y">
+            <div className="divide-y divide-border">
               {users.map((user: any) => (
-                <div key={user.id} className="flex items-center gap-4 p-4">
+                <div key={user.id} className="flex items-center gap-4 p-5">
                   <Avatar fallback={user.displayName?.[0] || '?'} size="sm" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{user.displayName}</p>

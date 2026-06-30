@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import AuthLayout from '@/components/landing/AuthLayout';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -35,7 +36,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
+    <AuthLayout>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Create Account</CardTitle>
@@ -100,6 +101,6 @@ export default function RegisterPage() {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </AuthLayout>
   );
 }
